@@ -1,0 +1,29 @@
+app/services/ikv_engine.py
+def calculate_average_income(years):
+    values = [y["income"] for y in years if y.get("income")]
+    return sum(values) / len(values) if values else 0
+
+
+def calculate_trend(years):
+    if len(years) < 2:
+        return "stabiel"
+    
+    if years[-1]["income"] > years[0]["income"]:
+        return "stijgend"
+    elif years[-1]["income"] < years[0]["income"]:
+        return "dalend"
+    return "stabiel"
+
+
+def assess_case(income, solvency, liquidity):
+
+    if income < 30000:
+        return "Afwijzen"
+
+    if solvency < 0.2:
+        return "Risico - handmatige beoordeling"
+
+    if liquidity < 1:
+        return "Let op liquiditeit"
+
+    return "Akkoord"
