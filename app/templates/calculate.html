@@ -37,7 +37,15 @@
       {% if calc.control_year %}<div class="small mt-2">Controlejaar {{ calc.control_year }} • geëxtrapoleerd € {{ '%.2f'|format(calc.control_year_extrapolated) }} • prognose € {{ '%.2f'|format(calc.control_year_prognose) }}</div>{% endif %}
     </div></div>
   </div>
-
+<div class="alert alert-info mt-4">
+    <h4>Beoordeling IKV Engine</h4>
+    <ul>
+        <li><strong>Nettowinst:</strong> € {{ netto_winst }}</li>
+        <li><strong>Solvabiliteit:</strong> {{ solvabiliteit }}%</li>
+        <li><strong>Liquiditeit (Current Ratio):</strong> {{ liquiditeit }}</li>
+    </ul>
+    <h5>Besluit: <strong>{{ oordeel }}</strong></h5>
+</div>
   <div class="col-xl-8">
     <div class="card mb-4"><div class="card-body">
       <div class="section-title">Pagina met berekeningsoverzicht en kernpunten</div>
