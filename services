@@ -1,29 +1,48 @@
-app/services/ikv_engine.py
-def calculate_average_income(years):
-    values = [y["income"] for y in years if y.get("income")]
-    return sum(values) / len(values) if values else 0
+# app/services/ikv_engine.py
 
-
-def calculate_trend(years):
-    if len(years) < 2:
-        return "stabiel"
+def calculate_net_income(vw_data: dict) -> float:
+    """Berekent de nettowinst op basis van V&W velden."""
+    if not vw_data:
+        return 0.0
     
-    if years[-1]["income"] > years[0]["income"]:
-        return "stijgend"
-    elif years[-1]["income"] < years[0]["income"]:
-        return "dalend"
-    return "stabiel"
+    omzet = float(vw_data.get("totale_omzet") or 0)
+    inkoop = float(vw_data.get("totaal_inkoopwaarde_omzet") or 0)
+    bedrijfskosten = float(vw_data.get("totaal_bedrijfskosten") or 0)
+    fin_resultaat = float(vw_data.get("som_van_financiele_baten_en_lasten") or 0)
+    
+    # Netto winst = Bruto resultaat - kosten + financieel resultaat
+    return (omzet - inkoop) - bedrijfskosten + fin_resultaat
 
+def calculate_solvency(balance_data: dict) -> float:
+    """Berekent de solvabiliteit (Eigen Vermogen / Totaal Vermogen)."""
+    if not balance_data:
+        return 0.0
+        
+    eigen_vermogen = float(balance_data.get("totaal_eigen_vermogen") or 0)
+    totaal_vermogen = float(balance_data.get("totaal_passiva") or 0)
+    
+    if totaal_vermogen == 0:
+        return 0.0
+    return round((eigen_vermogen / totaal_vermogen) * 100, 2) # in procenten
 
-def assess_case(income, solvency, liquidity):
+def calculate_liquidity(balance_data: dict) -> float:
+    """Berekent de current ratio (Vlottende Activa / Kort Vreemd Vermogen)."""
+    if not balance_data:
+        return 0.0
+        
+    vlottende_activa = float(balance_data.get("totaal_vlottende_activa") or 0)
+    kortlopende_schulden = float(balance_data.get("totaal_kortlopende_schulden") or 0)
+    
+    if kortlopende_schulden == 0:
+        return vlottende_activa if vlottende_activa > 0 else 0.0
+    return round(vlottende_activa / kortlopende_schulden, 2)
 
-    if income < 30000:
-        return "Afwijzen"
-
-    if solvency < 0.2:
-        return "Risico - handmatige beoordeling"
-
-    if liquidity < 1:
-        return "Let op liquiditeit"
-
-    return "Akkoord"
+def assess_case(avg_income: float, solvency: float, liquidity: float) -> str:
+    """Beslissingsboom op basis van acceptatiekaders."""
+    if avg_income < 30000:
+        return "Afwijzen - Toetsinkomen te laag"
+    if solvency < 20.0:
+        return "Risico - Solvabiliteit < 20% (Handmatige beoordeling nodig)"
+    if liquidity < 1.0:
+        return "Let op - Liquiditeit < 1.0 (Current Ratio)"
+    return "Akkoord - Voldoet aan basisnormen"
