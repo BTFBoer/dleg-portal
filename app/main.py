@@ -1700,7 +1700,40 @@ def calculate(
     c.last_calc_at = datetime.utcnow()
     s.add(c)
     s.commit()
+# ... je bestaande code waar je de 'case' en 'enterprise' ophaalt ...
 
+    # --- NIEUWE IKV ENGINE LOGICA ---
+    # Stel we pakken hier even het meest recente jaar (bijv. controlejaar) voor de ratio's:
+    latest_year = enterprise.years[-1] if enterprise.years else None
+    
+    netto_winst = 0.0
+    solvabiliteit = 0.0
+    liquiditeit = 0.0
+    oordeel = "Geen data"
+
+    if latest_year:
+        # Haal de JSON data op (als die leeg is, maak er een lege dict van)
+        vw_data = json.loads(latest_year.pl_json) if latest_year.pl_json else {}
+        balance_data = json.loads(latest_year.bs_json) if latest_year.bs_json else {}
+
+        # Haal het door jouw nieuwe engine!
+        netto_winst = calculate_net_income(vw_data)
+        solvabiliteit = calculate_solvency(balance_data)
+        liquiditeit = calculate_liquidity(balance_data)
+
+        # Let op: in een echte IKV pak je voor 'assess_case' het gemiddelde over 3 jaar. 
+        # Voor nu gebruiken we even de netto_winst van het laatste jaar om het te testen:
+        oordeel = assess_case(netto_winst, solvabiliteit, liquiditeit)
+    # --------------------------------
+    return templates.TemplateResponse("calculate.html", {
+        "request": request,
+        "case": case,
+        # Voeg deze regels toe:
+        "netto_winst": netto_winst,
+        "solvabiliteit": solvabiliteit,
+        "liquiditeit": liquiditeit,
+        "oordeel": oordeel
+    })
     return templates.TemplateResponse(
         "calculate.html",
         {
