@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start">
+  <div>
+    <h1 class="h3">KYC / Broncontroles</h1>
+    <div class="text-muted">Dossier {{ case.dossier_nr }} • {{ case.applicant_name }}</div>
+  </div>
+  <div class="text-end">
+    <a class="btn btn-outline-secondary" href="/cases/{{ case.id }}">Terug</a>
+  </div>
+</div>
+
+<hr>
+
+<form method="post" action="/cases/{{ case.id }}/kyc/new" class="row g-3">
+  <div class="col-md-3">
+    <label class="form-label">Type controle</label>
+    <select class="form-select" name="check_type" required>
+      <option value="Centraal Insolventie Register">Centraal Insolventie Register</option>
+      <option value="BIG Register">BIG Register</option>
+      <option value="LRK Register">LRK Register</option>
+      <option value="Google check">Google check</option>
+      <option value="Sancties/PEP">Sancties/PEP</option>
+      <option value="Overig">Overig</option>
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Datum controle</label>
+    <input class="form-control" name="checked_on" type="date">
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Resultaat</label>
+    <select class="form-select" name="result">
+      <option value="Nee">Nee</option>
+      <option value="Ja">Ja</option>
+      <option value="Onbekend">Onbekend</option>
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Bron/URL</label>
+    <input class="form-control" name="source_url" placeholder="https://...">
+  </div>
+
+  <div class="col-12">
+    <label class="form-label">Controledata (naam/gbd/KvK etc.)</label>
+    <input class="form-control" name="input_data" placeholder="bijv. Naam + geboortedatum / KvK nummer">
+  </div>
+
+  <div class="col-12">
+    <label class="form-label">Toelichting</label>
+    <textarea class="form-control" name="notes" rows="2"></textarea>
+  </div>
+
+  <div class="col-12">
+    <button class="btn btn-primary">Toevoegen</button>
+    <a class="btn btn-link" href="/cases/{{ case.id }}">Annuleren</a>
+  </div>
+</form>
+
+{% if checks %}
+  <h2 class="h5 mt-4">Bestaande controles</h2>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Datum</th>
+          <th>Resultaat</th>
+          <th>Bron</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in checks %}
+          <tr>
+            <td>{{ r.check_type }}</td>
+            <td>{{ r.checked_on or '-' }}</td>
+            <td>{{ r.result or '-' }}</td>
+            <td class="text-truncate" style="max-width:360px;">{{ r.source_url or '-' }}</td>
+            <td class="text-end">
+              <form method="post" action="/kyc/{{ r.id }}/delete" style="display:inline;">
+                <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Verwijderen?');">Verwijder</button>
+              </form>
+            </td>
+          </tr>
+          {% if r.input_data or r.notes %}
+          <tr>
+            <td></td>
+            <td colspan="3" class="text-muted small">
+              {% if r.input_data %}<div><b>Input:</b> {{ r.input_data }}</div>{% endif %}
+              {% if r.notes %}<div><b>Notitie:</b> {{ r.notes }}</div>{% endif %}
+            </td>
+            <td></td>
+          </tr>
+          {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+
+{% endblock %}

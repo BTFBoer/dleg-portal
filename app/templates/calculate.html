@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <div class="small soft">Dossier {{ case.dossier_nr }} • {{ enterprise.name }}</div>
+    <h1 class="h3 mb-1">Berekeningsoverzicht en kernpunten</h1>
+    <div class="soft">{{ case.applicant_name }} • {{ case.lender_name }} • policy {{ policy.label }} ({{ policy.key }})</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="/cases/{{ case.id }}">Terug naar dossier</a>
+    <a class="btn btn-success" href="/cases/{{ case.id }}/report.pdf?policy_key={{ policy.key }}&enterprise_id={{ enterprise.id }}&scope={{ scope_used }}">PDF rapport</a>
+  </div>
+</div>
+
+<div class="calc-grid mb-4">
+  <div class="card kpi-card"><div class="card-body"><div class="kpi-label">Toetsinkomen</div><div class="kpi-value mono">€ {{ '%.2f'|format(calc.final_income) }}</div></div></div>
+  <div class="card kpi-card"><div class="card-body"><div class="kpi-label">Gemiddelde na periodemeting</div><div class="kpi-value mono">€ {{ '%.2f'|format(calc.base_income_avg) }}</div></div></div>
+  <div class="card kpi-card"><div class="card-body"><div class="kpi-label">Max laatste jaar</div><div class="kpi-value mono">€ {{ '%.2f'|format(calc.capped_to_last_year) }}</div></div></div>
+  <div class="card kpi-card"><div class="card-body"><div class="kpi-label">Na controlejaar/prognose</div><div class="kpi-value mono">€ {{ '%.2f'|format(calc.interim_adjusted_income) }}</div></div></div>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-4">
+    <div class="card mb-4"><div class="card-body">
+      <div class="section-title">Kernpunten</div>
+      <ul class="mb-0">{% for item in core_points %}<li>{{ item }}</li>{% endfor %}</ul>
+    </div></div>
+    {% if risk_result %}
+      <div class="alert {{ 'alert-danger' if risk_result.hit else 'alert-success' }}">{{ risk_result.note }}{% if risk_result.matched_codes %}<div class="small mt-1">Matches: {{ risk_result.matched_codes|join(', ') }}</div>{% endif %}</div>
+    {% endif %}
+    <div class="card"><div class="card-body">
+      <div class="section-title">Context</div>
+      <div class="small">Scope: <b>{{ scope_used }}</b></div>
+      <div class="small">Entiteiten: {{ member_ids|join(', ') }}</div>
+      <div class="small">Effectief stemrecht: {{ '%.2f'|format(effective_voting_pct) }}%</div>
+      <div class="small">Effectief dividendbelang: {{ '%.2f'|format(effective_dividend_pct) }}%</div>
+      {% if calc.control_year %}<div class="small mt-2">Controlejaar {{ calc.control_year }} • geëxtrapoleerd € {{ '%.2f'|format(calc.control_year_extrapolated) }} • prognose € {{ '%.2f'|format(calc.control_year_prognose) }}</div>{% endif %}
+    </div></div>
+  </div>
+
+  <div class="col-xl-8">
+    <div class="card mb-4"><div class="card-body">
+      <div class="section-title">Pagina met berekeningsoverzicht en kernpunten</div>
+      <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Jaar</th><th>Inkomen</th><th>CR</th><th>QR</th><th>WK</th><th>SV</th></tr></thead><tbody>
+      {% for year in calc.income_years|sort %}
+        {% set r = calc.ratios.get(year, {}) %}
+        <tr>
+          <td>{{ year }}</td>
+          <td class="mono">€ {{ '%.2f'|format(calc.income_years[year]) }}</td>
+          <td>{{ (r.get('current_ratio')|round(2)) if r.get('current_ratio') is not none else 'n.v.t.' }}</td>
+          <td>{{ (r.get('quick_ratio')|round(2)) if r.get('quick_ratio') is not none else 'n.v.t.' }}</td>
+          <td class="mono">€ {{ '%.0f'|format(r.get('working_capital') or 0) }}</td>
+          <td>{{ (r.get('solvability_pct')|round(2)) if r.get('solvability_pct') is not none else 'n.v.t.' }}%</td>
+        </tr>
+      {% endfor %}
+      </tbody></table></div>
+    </div></div>
+
+    <div class="card"><div class="card-body">
+      <div class="section-title">Volledige berekening bekijken</div>
+      <div class="accordion" id="calcAccordion">
+        {% for row in year_breakdowns %}
+        <div class="accordion-item">
+          <h2 class="accordion-header"><button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#acc{{ loop.index }}">{{ row.year }} {% if row.is_control_year %}<span class="badge text-bg-warning ms-2">Controlejaar</span>{% endif %}</button></h2>
+          <div id="acc{{ loop.index }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" data-bs-parent="#calcAccordion">
+            <div class="accordion-body">
+              <div class="row g-3 small">
+                <div class="col-md-6">
+                  <div><b>Periode in maanden:</b> {{ '%.2f'|format(row.period_months) }}</div>
+                  <div><b>Basis inkomen:</b> € {{ '%.2f'|format(row.base) }}</div>
+                  <div><b>Positieve correcties:</b> € {{ '%.2f'|format(row.positives) }}</div>
+                  <div><b>Negatieve correcties:</b> € {{ '%.2f'|format(row.negatives) }}</div>
+                  <div><b>Overig Box 1:</b> € {{ '%.2f'|format(row.other_box1_income) }}</div>
+                  <div><b>Totaal jaarinkomen:</b> € {{ '%.2f'|format(row.total) }}</div>
+                </div>
+                <div class="col-md-6">
+                  <div><b>YTD realisatie:</b> € {{ '%.2f'|format(row.realized_income_ytd) }}</div>
+                  <div><b>Extrapolatie:</b> € {{ '%.2f'|format(row.extrapolated_income) }}</div>
+                  <div><b>Prognose:</b> € {{ '%.2f'|format(row.prognose_income) }}</div>
+                  <div><b>Omzet:</b> € {{ '%.2f'|format(row.turnover_total) }}</div>
+                  <div><b>Kostprijs:</b> € {{ '%.2f'|format(row.cogs_total) }}</div>
+                </div>
+                <div class="col-12"><hr></div>
+                <div class="col-md-3"><b>CR</b><div>{{ (row.ratios.get('current_ratio')|round(2)) if row.ratios.get('current_ratio') is not none else 'n.v.t.' }}</div></div>
+                <div class="col-md-3"><b>QR</b><div>{{ (row.ratios.get('quick_ratio')|round(2)) if row.ratios.get('quick_ratio') is not none else 'n.v.t.' }}</div></div>
+                <div class="col-md-3"><b>Werkkapitaal</b><div>€ {{ '%.0f'|format(row.ratios.get('working_capital') or 0) }}</div></div>
+                <div class="col-md-3"><b>Solvabiliteit</b><div>{{ (row.ratios.get('solvability_pct')|round(2)) if row.ratios.get('solvability_pct') is not none else 'n.v.t.' }}%</div></div>
+                <div class="col-md-6"><b>Debiteurendagen</b><div>{{ (row.ratios.get('debtor_days')|round(2)) if row.ratios.get('debtor_days') is not none else 'n.v.t.' }}</div></div>
+                <div class="col-md-6"><b>Crediteurendagen</b><div>{{ (row.ratios.get('creditor_days')|round(2)) if row.ratios.get('creditor_days') is not none else 'n.v.t.' }}</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% if calc.notes %}<div class="alert alert-info mt-3 mb-0"><ul class="mb-0">{% for n in calc.notes %}<li>{{ n }}</li>{% endfor %}</ul></div>{% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <div class="small soft">Dossier {{ case.dossier_nr }}{% if case.report_number %} • {{ case.report_number }}{% endif %}</div>
+    <h1 class="h3 mb-1">{{ case.applicant_name or 'Aanvrager' }}</h1>
+    <div class="soft">{{ case.lender_name }} • {{ case.case_type }} • {{ 'NHG' if case.with_nhg else 'Zonder NHG' }}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="/cases/{{ case.id }}/edit">Dossier bewerken</a>
+    <a class="btn btn-primary" href="/cases/{{ case.id }}/enterprises/new">Onderneming toevoegen</a>
+  </div>
+</div>
+
+<div class="calc-grid mb-4">
+  <div class="card kpi-card"><div class="card-body"><div class="kpi-label">Laatst berekend inkomen</div><div class="kpi-value mono">€ {{ '%.2f'|format(case.last_income or 0) }}</div></div></div>
+  <div class="card kpi-card"><div class="card-body"><div class="kpi-label">Beoordeling</div><div class="kpi-value">{{ case.assessment_result or '-' }}</div></div></div>
+  <div class="card kpi-card"><div class="card-body"><div class="kpi-label">Ondernemingen</div><div class="kpi-value">{{ enterprises|length }}</div></div></div>
+  <div class="card kpi-card"><div class="card-body"><div class="kpi-label">Policies</div><div class="kpi-value">{{ policies|length }}</div></div></div>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-8">
+    <div class="card mb-4"><div class="card-body">
+      <div class="section-title">Gegevens aanvraag + aanvrager</div>
+      <div class="row g-3 small">
+        <div class="col-md-6"><b>Adres:</b> {{ case.applicant_street }} {{ case.applicant_house_number }}, {{ case.applicant_postcode }} {{ case.applicant_city }}</div>
+        <div class="col-md-3"><b>Geboortedatum:</b> {{ case.applicant_dob or '-' }}</div>
+        <div class="col-md-3"><b>Geboorteplaats:</b> {{ case.applicant_birth_place or '-' }}</div>
+        <div class="col-md-6"><b>Intermediair:</b> {{ case.intermediary_office_name or '-' }}{% if case.intermediary_afm_number %} • AFM {{ case.intermediary_afm_number }}{% endif %}</div>
+        <div class="col-md-3"><b>Behandelaar:</b> {{ case.handler_name or '-' }}</div>
+        <div class="col-md-3"><b>Fiatteur:</b> {{ case.approver_name or '-' }}</div>
+        <div class="col-12"><b>Expert judgement:</b> {{ case.assessment_notes or '-' }}</div>
+        <div class="col-12"><b>Dossiernotities:</b> {{ case.notes or '-' }}</div>
+      </div>
+    </div></div>
+
+    <div class="card mb-4"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="section-title mb-0">Onderneming(en)</div>
+        <a class="btn btn-sm btn-primary" href="/cases/{{ case.id }}/enterprises/new">+ Onderneming</a>
+      </div>
+      {% if not enterprises %}
+        <div class="alert alert-secondary mb-0">Nog geen ondernemingen toegevoegd.</div>
+      {% else %}
+        {% for e in enterprises %}
+          <div class="border rounded-4 p-3 mb-3 bg-light-subtle">
+            <div class="d-flex justify-content-between gap-3 flex-wrap">
+              <div>
+                <div class="fw-semibold">{{ e.name }} <span class="badge text-bg-light">{{ e.legal_form }}</span></div>
+                <div class="small soft">KvK {{ e.kvk_nr or '-' }} • {{ e.address or '-' }} • {{ e.postcode_city or '' }}</div>
+                {% if e.sbi_codes %}<div class="small mt-1 text-truncate-2">SBI: {{ e.sbi_codes|replace('\n', ', ') }}</div>{% endif %}
+                {% if e.kvk_sync_source_url %}<div class="small soft mt-1">KvK-sync: {{ e.kvk_sync_last_at or '-' }}</div>{% endif %}
+              </div>
+              <div class="d-flex gap-2 flex-wrap">
+                <a class="btn btn-sm btn-outline-secondary" href="/enterprises/{{ e.id }}/edit">Bewerk</a>
+                <a class="btn btn-sm btn-outline-primary" href="/enterprises/{{ e.id }}/years/new">Balans / V&amp;W / IB</a>
+                <a class="btn btn-sm btn-outline-primary" href="/enterprises/{{ e.id }}/legal_changes/new">Rechtsvorm</a>
+              </div>
+            </div>
+            <div class="mt-3 d-flex gap-2 flex-wrap">
+              <form class="d-flex gap-2" method="post" enctype="multipart/form-data" action="/cases/{{ case.id }}/upload">
+                <input type="hidden" name="enterprise_id" value="{{ e.id }}">
+                <input type="hidden" name="category" value="{{ e.name }}">
+                <input class="form-control form-control-sm" type="file" name="file" required>
+                <button class="btn btn-sm btn-outline-dark">Upload document</button>
+              </form>
+              <a class="btn btn-sm btn-outline-success" href="/cases/{{ case.id }}/calculate?policy_key={{ (policies[0].key if policies else '') }}&enterprise_id={{ e.id }}">Berekenen</a>
+            </div>
+            {% set changes = legal_changes.get(e.id, []) %}
+            {% if changes %}<div class="small mt-2 soft">Rechtsvormwijzigingen: {% for ch in changes %}{{ ch.effective_date or '-' }} {{ ch.from_legal_form }} → {{ ch.to_legal_form }}{% if not loop.last %} • {% endif %}{% endfor %}</div>{% endif %}
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div></div>
+
+    <div class="card mb-4"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="section-title mb-0">Structuur / belangen / organogram</div>
+        <div class="d-flex gap-2"><a class="btn btn-sm btn-outline-secondary" href="/cases/{{ case.id }}/organogram">Bekijk organogram</a><a class="btn btn-sm btn-primary" href="/cases/{{ case.id }}/ownership/new">+ Belang</a></div>
+      </div>
+      {% if not ownerships %}<div class="alert alert-secondary mb-0">Nog geen holdings/belangen ingevoerd.</div>{% else %}
+      <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Owner</th><th>Owned</th><th>Belang</th><th>Stemrecht</th><th>Dividend</th><th>Notitie</th><th></th></tr></thead><tbody>
+      {% for o in ownerships %}
+        <tr>
+          <td>{% if o.owner_kind=='PERSON' %}{{ o.owner_label or case.applicant_name }}{% else %}{% set oe = (enterprises | selectattr('id','equalto',o.owner_enterprise_id) | list) %}{{ oe[0].name if oe else ('Entiteit #' ~ o.owner_enterprise_id) }}{% endif %}</td>
+          <td>{% set de = (enterprises | selectattr('id','equalto',o.owned_enterprise_id) | list) %}{{ de[0].name if de else ('Entiteit #' ~ o.owned_enterprise_id) }}</td>
+          <td>{{ '%.2f'|format(o.share_pct) }}%</td><td>{{ '%.2f'|format(o.voting_pct if o.voting_pct else o.share_pct) }}%</td><td>{{ 'Ja' if o.dividend_entitled else 'Nee' }}</td><td>{{ o.notes }}</td>
+          <td class="text-end"><form method="post" action="/ownership/{{ o.id }}/delete"><button class="btn btn-sm btn-outline-danger">Verwijder</button></form></td>
+        </tr>
+      {% endfor %}</tbody></table></div>{% endif %}
+    </div></div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="card mb-4"><div class="card-body">
+      <div class="section-title">Berekeningsoverzicht en kernpunten</div>
+      <div class="form-help mb-3">Kies onderneming en policy. Daarna zie je kernpunten én de volledige berekening op de berekenpagina.</div>
+      <form method="get" action="/cases/{{ case.id }}/calculate" class="row g-2">
+        <div class="col-12"><label class="form-label">Onderneming</label><select class="form-select" name="enterprise_id">{% for e in enterprises %}<option value="{{ e.id }}">{{ e.name }}</option>{% endfor %}</select></div>
+        <div class="col-12"><label class="form-label">Policy</label><select class="form-select" name="policy_key">{% for p in policies %}<option value="{{ p.key }}">{{ p.lender_name }} — {{ p.label }}</option>{% endfor %}</select></div>
+        <div class="col-12"><label class="form-label">Scope</label><select class="form-select" name="scope"><option value="auto">Auto (consolidatie)</option><option value="single">Alleen gekozen entiteit</option><option value="consolidated">Consolidatie forceren</option></select></div>
+        <div class="col-12 d-grid"><button class="btn btn-success" {% if not enterprises %}disabled{% endif %}>Berekening openen</button></div>
+      </form>
+      <a class="btn btn-outline-secondary w-100 mt-2" href="/cases/{{ case.id }}/multi">Inkomensanalyse meerdere geldverstrekkers</a>
+    </div></div>
+
+    <div class="card mb-4"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3"><div class="section-title mb-0">Documenten benodigd / uploads</div><a class="btn btn-sm btn-primary" href="/cases/{{ case.id }}/documents/new">+ Documentregel</a></div>
+      {% if docs %}<ul class="list-group mb-3">{% for d in docs %}<li class="list-group-item"><div class="fw-semibold">{{ d.filename }}</div><div class="small soft">{{ d.category or 'Algemeen' }}{% if d.enterprise_id %} • onderneming #{{ d.enterprise_id }}{% endif %} • {{ d.uploaded_at.strftime('%Y-%m-%d') }}</div></li>{% endfor %}</ul>{% else %}<div class="alert alert-secondary">Nog geen uploads.</div>{% endif %}
+      {% if documents_used %}<div class="small fw-semibold mb-2">Gebruikte documenten</div><ul class="list-group">{% for d in documents_used %}<li class="list-group-item"><div>{{ d.doc_type }}</div><div class="small soft">{{ d.filename }}{% if d.category %} • {{ d.category }}{% endif %}</div></li>{% endfor %}</ul>{% endif %}
+    </div></div>
+
+    <div class="card mb-4"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3"><div class="section-title mb-0">Controlepunten</div><div class="d-flex gap-2"><a class="btn btn-sm btn-outline-secondary" href="/cases/{{ case.id }}/controls/decisions/new">+ Beslissing</a><a class="btn btn-sm btn-primary" href="/cases/{{ case.id }}/controls/checklist/new">+ Controlepunt</a></div></div>
+      {% if checklist %}<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Punt</th><th>Resultaat</th><th>Behandelaar</th></tr></thead><tbody>{% for r in checklist %}<tr><td>{{ r.control_point }}</td><td>{{ r.result }}</td><td>{{ r.handler_name or '-' }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="alert alert-secondary">Nog geen controlepunten.</div>{% endif %}
+      {% if decisions %}<div class="small fw-semibold mt-3 mb-2">Beslissingen</div><div class="table-responsive"><table class="table table-sm"><thead><tr><th>Stap</th><th>Status</th><th>Opmerking</th></tr></thead><tbody>{% for r in decisions %}<tr><td>{{ r.step_nr }}</td><td>{{ r.status }}</td><td>{{ r.notes }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+    </div></div>
+
+    <div class="card"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3"><div class="section-title mb-0">Broncontroles / beoordeling</div><a class="btn btn-sm btn-primary" href="/cases/{{ case.id }}/kyc/new">+ KYC</a></div>
+      {% if kyc %}<ul class="list-group">{% for r in kyc %}<li class="list-group-item"><div class="fw-semibold">{{ r.check_type }} — {{ r.result }}</div><div class="small soft">{{ r.checked_on or '-' }}{% if r.source_url %} • {{ r.source_url }}{% endif %}</div><div class="small">{{ r.notes }}</div></li>{% endfor %}</ul>{% else %}<div class="alert alert-secondary">Nog geen broncontroles.</div>{% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3 mb-3">Nieuwe onderneming</h1>
+<div class="soft mb-3">Dossier {{ case.dossier_nr }} – {{ case.applicant_name }}</div>
+<form method="post" action="/cases/{{ case.id }}/enterprises/new" class="row g-3">
+  <div class="col-lg-8">
+    <div class="card mb-3"><div class="card-body">
+      <div class="section-title">Gegevens onderneming</div>
+      <div class="row g-3">
+        <div class="col-md-5"><label class="form-label">Naam onderneming</label><input class="form-control" name="name" required></div>
+        <div class="col-md-4"><label class="form-label">Statutaire naam</label><input class="form-control" name="statutory_name"></div>
+        <div class="col-md-3"><label class="form-label">Rechtsvorm</label><input class="form-control" name="legal_form" placeholder="EZ / BV / VOF" required></div>
+        <div class="col-md-3"><label class="form-label">KvK nummer</label><input class="form-control" name="kvk_nr" pattern="[0-9]{8}"></div>
+        <div class="col-md-3"><label class="form-label">Startdatum KvK</label><input class="form-control" type="date" name="start_date"></div>
+        <div class="col-md-3"><label class="form-label">Registratiedatum</label><input class="form-control" type="date" name="registration_date"></div>
+        <div class="col-md-3"><label class="form-label">Oprichtingsdatum</label><input class="form-control" type="date" name="incorporation_date"></div>
+        <div class="col-md-6"><label class="form-label">Straat + huisnummer</label><input class="form-control" name="address"></div>
+        <div class="col-md-6"><label class="form-label">Postcode + vestigingsplaats</label><input class="form-control" name="postcode_city"></div>
+        <div class="col-md-6"><label class="form-label">SBI-codes</label><textarea class="form-control" rows="3" name="sbi_codes" placeholder="één per regel"></textarea></div>
+        <div class="col-md-6"><label class="form-label">Bedrijfsactiviteiten</label><textarea class="form-control" rows="3" name="activities"></textarea></div>
+        <div class="col-md-6"><label class="form-label">Websites</label><textarea class="form-control" rows="2" name="websites"></textarea></div>
+        <div class="col-md-6"><label class="form-label">Organogram / structuurtekst</label><textarea class="form-control" rows="2" name="organogram"></textarea></div>
+      </div>
+    </div></div>
+
+    <div class="card mb-3"><div class="card-body">
+      <div class="section-title">KYC / KvK / Google</div>
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label">KvK adres check zakelijk/privé</label><input class="form-control" name="kvk_address_check_private"></div>
+        <div class="col-md-6"><label class="form-label">KvK toelichting</label><input class="form-control" name="kvk_address_check_notes"></div>
+        <div class="col-md-3"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" name="google_check_done" value="true" id="google_done"><label class="form-check-label" for="google_done">Google check gedaan</label></div></div>
+        <div class="col-md-3"><label class="form-label">Datum check</label><input class="form-control" type="date" name="google_check_date"></div>
+        <div class="col-md-6"><label class="form-label">Website onderneming</label><input class="form-control" name="google_check_website"></div>
+        <div class="col-md-6"><label class="form-label">Bedrijvenwebsites</label><textarea class="form-control" rows="2" name="google_check_company_pages"></textarea></div>
+        <div class="col-md-6"><label class="form-label">Social media</label><textarea class="form-control" rows="2" name="google_check_social"></textarea></div>
+        <div class="col-md-6"><label class="form-label">Waar komt omzet vandaan</label><textarea class="form-control" rows="2" name="google_check_revenue_source"></textarea></div>
+        <div class="col-md-6"><label class="form-label">Conclusie Google check</label><textarea class="form-control" rows="2" name="google_check_conclusion"></textarea></div>
+      </div>
+    </div></div>
+
+    <div class="card mb-3"><div class="card-body">
+      <div class="section-title">Overig</div>
+      <div class="row g-3">
+        <div class="col-md-4"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" name="corona_affected" value="true" id="corona"><label class="form-check-label" for="corona">Corona-impact gemeld</label></div></div>
+        <div class="col-md-8"><label class="form-label">Corona toelichting</label><textarea class="form-control" rows="2" name="corona_notes"></textarea></div>
+        <div class="col-md-4"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" name="foreign_ok" value="true" checked id="foreign_ok"><label class="form-check-label" for="foreign_ok">Buitenland akkoord</label></div></div>
+        <div class="col-md-8"><label class="form-label">Buitenland toelichting</label><textarea class="form-control" rows="2" name="foreign_notes"></textarea></div>
+        <div class="col-md-6"><label class="form-label">Boekhouder/accountant</label><input class="form-control" name="accountant_name"></div>
+        <div class="col-md-6"><label class="form-label">E-mail accountant</label><input class="form-control" name="accountant_email"></div>
+        <div class="col-12"><label class="form-label">Notities onderneming</label><textarea class="form-control" rows="3" name="enterprise_notes"></textarea></div>
+      </div>
+    </div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card sticky-actions"><div class="card-body">
+      <div class="section-title">Opslaan</div>
+      <div class="form-help mb-3">KvK-prefill werkt na opslaan via het bewerkscherm. Voor echte KvK-data heb je een KvK API-key nodig; de testomgeving gebruikt fictieve data.</div>
+      <button class="btn btn-primary w-100 mb-2">Onderneming opslaan</button>
+      <a class="btn btn-outline-secondary w-100" href="/cases/{{ case.id }}">Terug</a>
+    </div></div>
+  </div>
+</form>
+{% endblock %}

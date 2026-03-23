@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3 mb-3">Onderneming bewerken</h1>
+<div class="soft mb-3">Dossier {{ case.dossier_nr }} – {{ case.applicant_name }}</div>
+<div class="card mb-3"><div class="card-body"><div class="section-title">KvK koppeling</div><div class="form-help mb-2">Gebruik testomgeving (fictieve data) of zet een echte <code>KVK_API_KEY</code> als environment variable. KvK API kan actuele bedrijfsgegevens prefillen; KvK geeft geen bestuurders/aandeelhouders/UBO via de API.</div><form method="post" action="/enterprises/{{ enterprise.id }}/kvk/prefill" class="row g-2 align-items-end"><div class="col-md-4"><label class="form-label">KvK nummer</label><input class="form-control" value="{{ enterprise.kvk_nr }}" disabled></div><div class="col-md-4"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" name="use_test_env" value="true" id="use_test_env"><label class="form-check-label" for="use_test_env">Gebruik testomgeving</label></div></div><div class="col-md-4"><button class="btn btn-outline-primary w-100">KvK-prefill uitvoeren</button></div>{% if enterprise.kvk_sync_source_url %}<div class="col-12 small soft">Laatste sync: {{ enterprise.kvk_sync_last_at or "" }} • <span class="text-break">{{ enterprise.kvk_sync_source_url }}</span></div>{% endif %}</form></div></div><form method="post" action="/enterprises/{{ enterprise.id }}/edit" class="row g-3">
+  <div class="col-lg-8">
+    <div class="card mb-3"><div class="card-body">
+      <div class="section-title">Gegevens onderneming</div>
+      <div class="row g-3">
+        <div class="col-md-5"><label class="form-label">Naam onderneming</label><input class="form-control" name="name" value="{{ enterprise.name }}" required></div>
+        <div class="col-md-4"><label class="form-label">Statutaire naam</label><input class="form-control" name="statutory_name" value="{{ enterprise.statutory_name }}"></div>
+        <div class="col-md-3"><label class="form-label">Rechtsvorm</label><input class="form-control" name="legal_form" value="{{ enterprise.legal_form }}" placeholder="EZ / BV / VOF" required></div>
+        <div class="col-md-3"><label class="form-label">KvK nummer</label><input class="form-control" name="kvk_nr" value="{{ enterprise.kvk_nr }}" pattern="[0-9]{8}"></div>
+        <div class="col-md-3"><label class="form-label">Startdatum KvK</label><input class="form-control" type="date" name="start_date" value="{{ enterprise.start_date.isoformat() if enterprise.start_date else "" }}"></div>
+        <div class="col-md-3"><label class="form-label">Registratiedatum</label><input class="form-control" type="date" name="registration_date" value="{{ enterprise.registration_date.isoformat() if enterprise.registration_date else "" }}"></div>
+        <div class="col-md-3"><label class="form-label">Oprichtingsdatum</label><input class="form-control" type="date" name="incorporation_date" value="{{ enterprise.incorporation_date.isoformat() if enterprise.incorporation_date else "" }}"></div>
+        <div class="col-md-6"><label class="form-label">Straat + huisnummer</label><input class="form-control" name="address" value="{{ enterprise.address }}"></div>
+        <div class="col-md-6"><label class="form-label">Postcode + vestigingsplaats</label><input class="form-control" name="postcode_city" value="{{ enterprise.postcode_city }}"></div>
+        <div class="col-md-6"><label class="form-label">SBI-codes</label><textarea class="form-control" rows="3" name="sbi_codes" placeholder="één per regel">{{ enterprise.sbi_codes }}</textarea></div>
+        <div class="col-md-6"><label class="form-label">Bedrijfsactiviteiten</label><textarea class="form-control" rows="3" name="activities">{{ enterprise.activities }}</textarea></div>
+        <div class="col-md-6"><label class="form-label">Websites</label><textarea class="form-control" rows="2" name="websites">{{ enterprise.websites }}</textarea></div>
+        <div class="col-md-6"><label class="form-label">Organogram / structuurtekst</label><textarea class="form-control" rows="2" name="organogram">{{ enterprise.organogram }}</textarea></div>
+      </div>
+    </div></div>
+
+    <div class="card mb-3"><div class="card-body">
+      <div class="section-title">KYC / KvK / Google</div>
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label">KvK adres check zakelijk/privé</label><input class="form-control" name="kvk_address_check_private" value="{{ enterprise.kvk_address_check_private }}"></div>
+        <div class="col-md-6"><label class="form-label">KvK toelichting</label><input class="form-control" name="kvk_address_check_notes" value="{{ enterprise.kvk_address_check_notes }}"></div>
+        <div class="col-md-3"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" name="google_check_done" value="true" id="google_done" {% if enterprise.google_check_done %}checked{% endif %}><label class="form-check-label" for="google_done">Google check gedaan</label></div></div>
+        <div class="col-md-3"><label class="form-label">Datum check</label><input class="form-control" type="date" name="google_check_date" value="{{ enterprise.google_check_date.isoformat() if enterprise.google_check_date else "" }}"></div>
+        <div class="col-md-6"><label class="form-label">Website onderneming</label><input class="form-control" name="google_check_website" value="{{ enterprise.google_check_website }}"></div>
+        <div class="col-md-6"><label class="form-label">Bedrijvenwebsites</label><textarea class="form-control" rows="2" name="google_check_company_pages">{{ enterprise.google_check_company_pages }}</textarea></div>
+        <div class="col-md-6"><label class="form-label">Social media</label><textarea class="form-control" rows="2" name="google_check_social">{{ enterprise.google_check_social }}</textarea></div>
+        <div class="col-md-6"><label class="form-label">Waar komt omzet vandaan</label><textarea class="form-control" rows="2" name="google_check_revenue_source">{{ enterprise.google_check_revenue_source }}</textarea></div>
+        <div class="col-md-6"><label class="form-label">Conclusie Google check</label><textarea class="form-control" rows="2" name="google_check_conclusion">{{ enterprise.google_check_conclusion }}</textarea></div>
+      </div>
+    </div></div>
+
+    <div class="card mb-3"><div class="card-body">
+      <div class="section-title">Overig</div>
+      <div class="row g-3">
+        <div class="col-md-4"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" name="corona_affected" value="true" id="corona" {% if enterprise.corona_affected %}checked{% endif %}><label class="form-check-label" for="corona">Corona-impact gemeld</label></div></div>
+        <div class="col-md-8"><label class="form-label">Corona toelichting</label><textarea class="form-control" rows="2" name="corona_notes">{{ enterprise.corona_notes }}</textarea></div>
+        <div class="col-md-4"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" name="foreign_ok" value="true" id="foreign_ok" {% if enterprise.foreign_ok %}checked{% endif %}><label class="form-check-label" for="foreign_ok">Buitenland akkoord</label></div></div>
+        <div class="col-md-8"><label class="form-label">Buitenland toelichting</label><textarea class="form-control" rows="2" name="foreign_notes">{{ enterprise.foreign_notes }}</textarea></div>
+        <div class="col-md-6"><label class="form-label">Boekhouder/accountant</label><input class="form-control" name="accountant_name" value="{{ enterprise.accountant_name }}"></div>
+        <div class="col-md-6"><label class="form-label">E-mail accountant</label><input class="form-control" name="accountant_email" value="{{ enterprise.accountant_email }}"></div>
+        <div class="col-12"><label class="form-label">Notities onderneming</label><textarea class="form-control" rows="3" name="enterprise_notes">{{ enterprise.enterprise_notes }}</textarea></div>
+      </div>
+    </div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card sticky-actions"><div class="card-body">
+      <div class="section-title">Opslaan</div>
+      <div class="form-help mb-3">KvK-prefill werkt na opslaan via het bewerkscherm. Voor echte KvK-data heb je een KvK API-key nodig; de testomgeving gebruikt fictieve data.</div>
+      <button class="btn btn-primary w-100 mb-2">Opslaan</button>
+      <a class="btn btn-outline-secondary w-100" href="/cases/{{ case.id }}">Terug</a>
+    </div></div>
+  </div>
+</form>
+{% endblock %}

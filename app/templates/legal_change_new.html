@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start">
+  <div>
+    <h1 class="h3">Rechtsvormwijzigingen</h1>
+    <div class="text-muted">{{ enterprise.name }} • dossier {{ case.dossier_nr }}</div>
+  </div>
+  <div class="text-end">
+    <a class="btn btn-outline-secondary" href="/cases/{{ case.id }}">Terug</a>
+  </div>
+</div>
+
+<hr>
+
+<div class="alert alert-info">
+  Leg hier rechtsvorm-/structuurwijzigingen vast. Dit helpt om situaties te onderbouwen zoals “≥ 3 jaar ondernemer i.v.m. rechtsvormwijziging” (zoals in de voorbeelden).
+</div>
+
+<form method="post" action="/enterprises/{{ enterprise.id }}/legal_changes/new" class="row g-3">
+  <div class="col-md-3">
+    <label class="form-label">Ingangsdatum</label>
+    <input class="form-control" name="effective_date" type="date">
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Van rechtsvorm</label>
+    <input class="form-control" name="from_legal_form" placeholder="bijv. Eenmanszaak">
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Naar rechtsvorm</label>
+    <input class="form-control" name="to_legal_form" placeholder="bijv. BV">
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Notitie (kort)</label>
+    <input class="form-control" name="notes" placeholder="bijv. inbreng onderneming">
+  </div>
+
+  <div class="col-md-6">
+    <label class="form-label">Oude KvK (optioneel)</label>
+    <input class="form-control" name="kvk_nr_old">
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">Nieuwe KvK (optioneel)</label>
+    <input class="form-control" name="kvk_nr_new">
+  </div>
+
+  <div class="col-12">
+    <button class="btn btn-primary">Toevoegen</button>
+    <a class="btn btn-link" href="/cases/{{ case.id }}">Annuleren</a>
+  </div>
+</form>
+
+{% if changes %}
+  <h2 class="h5 mt-4">Bestaande wijzigingen</h2>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Datum</th>
+          <th>Van</th>
+          <th>Naar</th>
+          <th>KvK oud</th>
+          <th>KvK nieuw</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ch in changes %}
+          <tr>
+            <td>{{ ch.effective_date or '-' }}</td>
+            <td>{{ ch.from_legal_form or '-' }}</td>
+            <td>{{ ch.to_legal_form or '-' }}</td>
+            <td>{{ ch.kvk_nr_old or '-' }}</td>
+            <td>{{ ch.kvk_nr_new or '-' }}</td>
+            <td class="text-end">
+              <form method="post" action="/legal_changes/{{ ch.id }}/delete" style="display:inline;">
+                <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Verwijderen?');">Verwijder</button>
+              </form>
+            </td>
+          </tr>
+          {% if ch.notes %}
+          <tr>
+            <td></td>
+            <td colspan="4" class="text-muted small">{{ ch.notes }}</td>
+            <td></td>
+          </tr>
+          {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+
+{% endblock %}

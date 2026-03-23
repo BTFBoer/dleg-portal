@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center">
+  <div>
+    <h1 class="h3">Policies</h1>
+    <p class="text-muted">Regels staan in JSON en zijn per geldverstrekker te onderhouden.</p>
+  </div>
+  <a class="btn btn-primary" href="/policies/new">Nieuwe policy</a>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-sm align-middle">
+    <thead>
+      <tr>
+        <th>Lender</th>
+        <th>Label</th>
+        <th>Key</th>
+        <th>Versie</th>
+        <th>Bron</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in policies %}
+      <tr>
+        <td>{{ p.lender_name }}</td>
+        <td>{{ p.label }}</td>
+        <td><code>{{ p.key }}</code></td>
+        <td>{{ p.version or '-' }}</td>
+        <td class="text-truncate" style="max-width: 320px;">{{ p.source_url or '-' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="alert alert-secondary">
+  Tip: download acceptatiegidsen via het script <code>scripts/sync_hypotheekcompany.py</code> en zet de relevante rekenregels om naar JSON.
+</div>
+{% endblock %}

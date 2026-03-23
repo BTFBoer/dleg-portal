@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <div class="small soft">Dossier {{ case.dossier_nr }} • {{ enterprise.name }}</div>
+    <h1 class="h3 mb-1">Balans, V&amp;W en IB invoer</h1>
+    <div class="soft">Gebruik één scherm per jaar. Totaalvelden worden automatisch gekoppeld aan de kernberekening.</div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-outline-secondary" href="/cases/{{ case.id }}">Terug naar dossier</a>
+    {% if selected_year %}
+    <a class="btn btn-outline-success" href="/cases/{{ case.id }}/calculate?enterprise_id={{ enterprise.id }}&policy_key=NHG_IKV_01_2026">Berekeningsoverzicht</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-9">
+    <form method="post" class="card shadow-soft" id="yearForm">
+      <div class="card-body">
+        <div class="section-title">Basis jaarrecord</div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-2"><label class="form-label">Jaar</label><input class="form-control" type="number" name="year" value="{{ selected.year if selected else '' }}" required></div>
+          <div class="col-md-3"><label class="form-label">Periode start</label><input class="form-control" type="date" name="period_start" value="{{ selected.period_start or '' }}"></div>
+          <div class="col-md-3"><label class="form-label">Periode eind</label><input class="form-control" type="date" name="period_end" value="{{ selected.period_end or '' }}"></div>
+          <div class="col-md-2"><label class="form-label">Maanden override</label><input class="form-control calc-field" type="number" step="0.01" name="period_months_override" value="{{ selected.period_months_override if selected else 0 }}"></div>
+          <div class="col-md-2 d-flex align-items-end"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_control_year" id="is_control_year" {% if selected and selected.is_control_year %}checked{% endif %}><label class="form-check-label" for="is_control_year">Controlejaar</label></div></div>
+
+          <div class="col-md-2"><label class="form-label">YTD maanden</label><input class="form-control calc-field" type="number" step="1" name="ytd_months" value="{{ selected.ytd_months if selected else 0 }}"></div>
+          <div class="col-md-3"><label class="form-label">Gerealiseerd YTD</label><input class="form-control calc-field money" type="number" step="0.01" name="realized_income_ytd" value="{{ selected.realized_income_ytd if selected else 0 }}"></div>
+          <div class="col-md-3"><label class="form-label">Extrapolatie (override)</label><input class="form-control calc-field money" type="number" step="0.01" name="extrapolated_income" value="{{ selected.extrapolated_income if selected else 0 }}"></div>
+          <div class="col-md-4"><label class="form-label">Prognose volledig jaar</label><input class="form-control calc-field money" type="number" step="0.01" name="prognose_income" value="{{ selected.prognose_income if selected else 0 }}"></div>
+        </div>
+
+        <ul class="nav nav-pills mb-3" role="tablist">
+          <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-balance" type="button">Balans</button></li>
+          <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-pl" type="button">Winst- en verliesrekening</button></li>
+          <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-ib" type="button">IB</button></li>
+          <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-core" type="button">Kernberekening</button></li>
+        </ul>
+
+        <input type="hidden" name="bs_json" id="bs_json">
+        <input type="hidden" name="pl_json" id="pl_json">
+        <input type="hidden" name="ib_json" id="ib_json">
+
+        <div class="tab-content">
+          <div class="tab-pane fade show active" id="tab-balance">
+            {% for group in balance_groups %}
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-header bg-light fw-semibold">{{ group.title }}</div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-sm align-middle mb-0 detail-table">
+                    <thead><tr><th style="width:70%">Post</th><th class="text-end">Waarde</th></tr></thead>
+                    <tbody>
+                      {% for key, label in group.fields %}
+                      {% set val = year_detail.bs.get(key, 0) %}
+                      <tr class="{% if 'totaal' in key or key in ['totaal_activa','totaal_passiva'] %}table-light{% endif %}">
+                        <td>{{ label }}</td>
+                        <td><input class="form-control form-control-sm text-end detail-input money {% if 'totaal' in key or key in ['totaal_activa','totaal_passiva'] %}bg-light{% endif %}" data-bucket="bs" data-key="{{ key }}" type="number" step="0.01" value="{{ val }}" {% if 'totaal' in key or key in ['totaal_activa','totaal_passiva'] %}readonly{% endif %}></td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="tab-pane fade" id="tab-pl">
+            {% for group in pl_groups %}
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-header bg-light fw-semibold">{{ group.title }}</div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-sm align-middle mb-0 detail-table">
+                    <thead><tr><th style="width:70%">Post</th><th class="text-end">Waarde</th></tr></thead>
+                    <tbody>
+                      {% for key, label in group.fields %}
+                      {% set val = year_detail.pl.get(key, 0) %}
+                      <tr class="{% if 'totaal' in key or 'netto_' in key or 'som_' in key or key in ['totale_omzet','financiele_baten','financiele_lasten','buitengewone_baten','buitengewone_lasten'] %}table-light{% endif %}">
+                        <td>{{ label }}</td>
+                        <td><input class="form-control form-control-sm text-end detail-input money {% if 'totaal' in key or 'netto_' in key or 'som_' in key or key in ['totale_omzet','financiele_baten','financiele_lasten','buitengewone_baten','buitengewone_lasten'] %}bg-light{% endif %}" data-bucket="pl" data-key="{{ key }}" type="number" step="0.01" value="{{ val }}" {% if 'totaal' in key or 'netto_' in key or 'som_' in key or key in ['totale_omzet','financiele_baten','financiele_lasten','buitengewone_baten','buitengewone_lasten'] %}readonly{% endif %}></td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="tab-pane fade" id="tab-ib">
+            {% for group in ib_groups %}
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-header bg-light fw-semibold">{{ group.title }}</div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-sm align-middle mb-0 detail-table">
+                    <thead><tr><th style="width:70%">Post</th><th class="text-end">Waarde</th></tr></thead>
+                    <tbody>
+                      {% for key, label in group.fields %}
+                      {% set val = year_detail.ib.get(key, 0) %}
+                      <tr class="{% if 'totaal' in key or 'deel_resultaat' in key or 'te_verdelen_resultaat' in key %}table-light{% endif %}">
+                        <td>{{ label }}</td>
+                        <td><input class="form-control form-control-sm text-end detail-input money {% if 'totaal' in key or 'deel_resultaat' in key or 'te_verdelen_resultaat' in key %}bg-light{% endif %}" data-bucket="ib" data-key="{{ key }}" type="number" step="0.01" value="{{ val }}" {% if 'totaal' in key or 'deel_resultaat' in key or 'te_verdelen_resultaat' in key %}readonly{% endif %}></td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="tab-pane fade" id="tab-core">
+            <div class="card border-0 shadow-sm mb-3"><div class="card-body">
+              <div class="section-title">Gelinkte kernvelden</div>
+              <div class="form-help mb-3">Deze velden worden automatisch gevuld vanuit Balans, V&amp;W en IB. Je hoeft hier normaal niets handmatig te doen.</div>
+              <div class="row g-3">
+                <div class="col-md-3"><label class="form-label">Saldo fiscale winst</label><input class="form-control money" id="saldo_fiscale_winst" name="saldo_fiscale_winst" type="number" step="0.01" value="{{ selected.saldo_fiscale_winst if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Netto resultaat (geen IB)</label><input class="form-control money" id="net_result_no_ib" name="net_result_no_ib" type="number" step="0.01" value="{{ selected.net_result_no_ib if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Privégebruik auto</label><input class="form-control money" id="private_use_car" name="private_use_car" type="number" step="0.01" value="{{ selected.private_use_car if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Dividend</label><input class="form-control money" id="dividend" name="dividend" type="number" step="0.01" value="{{ selected.dividend if selected else 0 }}"></div>
+
+                <div class="col-md-3"><label class="form-label">Loon vóór start</label><input class="form-control money" id="box1_wage_before_start" name="box1_wage_before_start" type="number" step="0.01" value="{{ selected.box1_wage_before_start if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Loon tijdens</label><input class="form-control money" id="box1_wage_during" name="box1_wage_during" type="number" step="0.01" value="{{ selected.box1_wage_during if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Uitkeringen</label><input class="form-control money" id="box1_benefits" name="box1_benefits" type="number" step="0.01" value="{{ selected.box1_benefits if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">ROW</label><input class="form-control money" id="box1_row" name="box1_row" type="number" step="0.01" value="{{ selected.box1_row if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Overig Box 1</label><input class="form-control money" id="other_box1_income" name="other_box1_income" type="number" step="0.01" value="{{ selected.other_box1_income if selected else 0 }}"></div>
+
+                <div class="col-md-3"><label class="form-label">Omzet totaal</label><input class="form-control money" id="turnover_total" name="turnover_total" type="number" step="0.01" value="{{ selected.turnover_total if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Kostprijs omzet</label><input class="form-control money" id="cogs_total" name="cogs_total" type="number" step="0.01" value="{{ selected.cogs_total if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Bedrijfskosten totaal</label><input class="form-control money" id="operating_costs_total" name="operating_costs_total" type="number" step="0.01" value="{{ selected.operating_costs_total if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Afschrijvingen</label><input class="form-control money" id="depreciation_total" name="depreciation_total" type="number" step="0.01" value="{{ selected.depreciation_total if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Financiële baten</label><input class="form-control money" id="financial_income_total" name="financial_income_total" type="number" step="0.01" value="{{ selected.financial_income_total if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Financiële lasten</label><input class="form-control money" id="financial_expense_total" name="financial_expense_total" type="number" step="0.01" value="{{ selected.financial_expense_total if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Buitengewone baten</label><input class="form-control money" id="extraordinary_income_total" name="extraordinary_income_total" type="number" step="0.01" value="{{ selected.extraordinary_income_total if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Buitengewone lasten</label><input class="form-control money" id="extraordinary_expense_total" name="extraordinary_expense_total" type="number" step="0.01" value="{{ selected.extraordinary_expense_total if selected else 0 }}"></div>
+
+                <div class="col-md-3"><label class="form-label">Voorraden</label><input class="form-control money" id="inventories" name="inventories" type="number" step="0.01" value="{{ selected.inventories if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Vorderingen</label><input class="form-control money" id="receivables" name="receivables" type="number" step="0.01" value="{{ selected.receivables if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Overige vlottende activa</label><input class="form-control money" id="other_current_assets" name="other_current_assets" type="number" step="0.01" value="{{ selected.other_current_assets if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Liquide middelen</label><input class="form-control money" id="cash" name="cash" type="number" step="0.01" value="{{ selected.cash if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Crediteuren</label><input class="form-control money" id="creditors" name="creditors" type="number" step="0.01" value="{{ selected.creditors if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Belastingen/premies</label><input class="form-control money" id="taxes_payable" name="taxes_payable" type="number" step="0.01" value="{{ selected.taxes_payable if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Overige kortlopende schulden</label><input class="form-control money" id="other_current_liabilities" name="other_current_liabilities" type="number" step="0.01" value="{{ selected.other_current_liabilities if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Vlottende activa totaal</label><input class="form-control money" id="current_assets" name="current_assets" type="number" step="0.01" value="{{ selected.current_assets if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Kort vreemd vermogen</label><input class="form-control money" id="current_liabilities" name="current_liabilities" type="number" step="0.01" value="{{ selected.current_liabilities if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Eigen vermogen</label><input class="form-control money" id="equity" name="equity" type="number" step="0.01" value="{{ selected.equity if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Totaal activa</label><input class="form-control money" id="total_assets" name="total_assets" type="number" step="0.01" value="{{ selected.total_assets if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Immateriële vaste activa</label><input class="form-control money" id="intangible_assets" name="intangible_assets" type="number" step="0.01" value="{{ selected.intangible_assets if selected else 0 }}"></div>
+
+                <div class="col-md-3"><label class="form-label">(Beperkt) niet aftrekbare kosten</label><input class="form-control money" name="non_deductible_costs" type="number" step="0.01" value="{{ selected.non_deductible_costs if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Bijzondere lasten (fiscaal)</label><input class="form-control money" name="special_tax_expenses" type="number" step="0.01" value="{{ selected.special_tax_expenses if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Willekeurige afschrijvingen</label><input class="form-control money" name="random_depreciation" type="number" step="0.01" value="{{ selected.random_depreciation if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Investeringsaftrek</label><input class="form-control money" name="investment_deduction" type="number" step="0.01" value="{{ selected.investment_deduction if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Overige positieve fiscale corr.</label><input class="form-control money" name="other_positive_fiscal" type="number" step="0.01" value="{{ selected.other_positive_fiscal if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Bijzondere baten / incidenteel</label><input class="form-control money" name="incidental_income" type="number" step="0.01" value="{{ selected.incidental_income if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Overige negatieve fiscale corr.</label><input class="form-control money" name="other_negative_fiscal" type="number" step="0.01" value="{{ selected.other_negative_fiscal if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Vervallen huurlasten basis</label><input class="form-control money" name="expired_rent_base" type="number" step="0.01" value="{{ selected.expired_rent_base if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Factor % huurlasten</label><input class="form-control" name="expired_rent_factor_pct" type="number" step="0.01" value="{{ selected.expired_rent_factor_pct if selected else 85 }}"></div>
+                <div class="col-md-3"><label class="form-label">Positieve corr. op gemiddelde</label><input class="form-control money" name="other_positive_avg" type="number" step="0.01" value="{{ selected.other_positive_avg if selected else 0 }}"></div>
+                <div class="col-md-3"><label class="form-label">Negatieve corr. op gemiddelde</label><input class="form-control money" name="other_negative_avg" type="number" step="0.01" value="{{ selected.other_negative_avg if selected else 0 }}"></div>
+                <div class="col-md-4"><label class="form-label">DGA salaris</label><input class="form-control money" name="dga_salary" type="number" step="0.01" value="{{ selected.dga_salary if selected else 0 }}"></div>
+                <div class="col-md-4"><label class="form-label">Winst na Vpb</label><input class="form-control money" name="profit_after_corp_tax" type="number" step="0.01" value="{{ selected.profit_after_corp_tax if selected else 0 }}"></div>
+              </div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer bg-transparent d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="soft">Preview: <span id="preview-income" class="mono">€ 0,00</span> • CR <span id="preview-cr" class="mono">0,00</span> • QR <span id="preview-qr" class="mono">0,00</span> • WK <span id="preview-wk" class="mono">€ 0,00</span> • Extrapolatie <span id="preview-extrap" class="mono">€ 0,00</span></div>
+        <button class="btn btn-primary">Jaar opslaan / bijwerken</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-xl-3">
+    <div class="card mb-3"><div class="card-body">
+      <div class="section-title">Kernpunten</div>
+      <ul class="small mb-0 ps-3">
+        <li>Vul één jaar tegelijk in; totaalvelden worden gekoppeld aan de kernberekening.</li>
+        <li>Gebruik detailposten voor volledige dossiervorming en rapportage.</li>
+        <li>De kernvelden zijn zichtbaar in de tab <b>Kernberekening</b>.</li>
+        <li>Database reset is de juiste route bij deze versie.</li>
+      </ul>
+    </div></div>
+    <div class="card"><div class="card-body">
+      <div class="section-title">Bestaande jaren</div>
+      {% if years %}
+      <div class="list-group list-group-flush">
+        {% for y in years %}
+        <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if selected_year == y.year %}active{% endif %}" href="/enterprises/{{ enterprise.id }}/years/new?year={{ y.year }}">
+          <span>{{ y.year }}</span>
+          <span class="small">{% if y.is_control_year %}Controlejaar{% else %}&nbsp;{% endif %}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="alert alert-secondary mb-0">Nog geen jaren ingevoerd.</div>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const BALANCE_FORMULAS = {{ balance_formulas|tojson }};
+const PL_FORMULAS = {{ pl_formulas|tojson }};
+const PL_COST_COMPONENTS = {{ pl_cost_components|tojson }};
+const IB_FORMULAS = {{ ib_formulas|tojson }};
+
+(function(){
+  const q = (sel) => document.querySelector(sel);
+  const all = (sel) => Array.from(document.querySelectorAll(sel));
+  const num = (el) => parseFloat(String(el?.value || '0').replace(',', '.')) || 0;
+  const field = (bucket, key) => q(`[data-bucket="${bucket}"][data-key="${key}"]`);
+  const bucketMap = (bucket) => {
+    const m = {};
+    all(`[data-bucket="${bucket}"]`).forEach(el => m[el.dataset.key] = num(el));
+    return m;
+  };
+  const setIfPresent = (id, v) => { const el = q(`#${id}`); if (el) el.value = (Math.round((v || 0) * 100) / 100).toFixed(2); };
+  const fmt = (v) => new Intl.NumberFormat('nl-NL', {style:'currency', currency:'EUR'}).format(v || 0);
+  const fmtNum = (v) => new Intl.NumberFormat('nl-NL', {minimumFractionDigits:2, maximumFractionDigits:2}).format(v || 0);
+
+  function applyFormulas(bucket, formulas){
+    let changed = true;
+    let guard = 0;
+    while (changed && guard < 5) {
+      guard += 1;
+      changed = false;
+      for (const [target, keys] of Object.entries(formulas)) {
+        const targetEl = field(bucket, target);
+        if (!targetEl) continue;
+        const current = num(targetEl);
+        const sum = keys.reduce((acc, k) => acc + num(field(bucket, k)), 0);
+        if ((current === 0 || targetEl.readOnly) && Math.abs(current - sum) > 0.009) {
+          targetEl.value = sum.toFixed(2);
+          changed = true;
+        }
+      }
+    }
+  }
+
+  function computePlDerived(){
+    const omzet = num(field('pl','totale_omzet'));
+    const inkoop = num(field('pl','totaal_inkoopwaarde_omzet'));
+    const brutoEl = field('pl','totaal_bruto_bedrijfsresultaat');
+    if (brutoEl) brutoEl.value = (omzet - inkoop).toFixed(2);
+
+    const kosten = PL_COST_COMPONENTS.reduce((acc, k) => acc + num(field('pl', k)), 0);
+    const kostenEl = field('pl','totaal_bedrijfskosten');
+    if (kostenEl) kostenEl.value = kosten.toFixed(2);
+    const nettoBedrijfsEl = field('pl','netto_bedrijfsresultaat');
+    if (nettoBedrijfsEl) nettoBedrijfsEl.value = (omzet - inkoop - kosten).toFixed(2);
+
+    const finSumEl = field('pl','som_financiele_baten_en_lasten');
+    if (finSumEl) finSumEl.value = (num(field('pl','financiele_baten')) - num(field('pl','financiele_lasten'))).toFixed(2);
+
+    const bgSumEl = field('pl','som_buitengewone_baten_en_lasten');
+    if (bgSumEl) bgSumEl.value = (num(field('pl','buitengewone_baten')) - num(field('pl','buitengewone_lasten'))).toFixed(2);
+
+    const nwvbEl = field('pl','netto_winst_voor_belasting');
+    if (nwvbEl) nwvbEl.value = (num(field('pl','netto_bedrijfsresultaat')) + num(field('pl','som_financiele_baten_en_lasten')) + num(field('pl','som_buitengewone_baten_en_lasten'))).toFixed(2);
+
+    const nwrEl = field('pl','netto_winst_resultaat');
+    if (nwrEl) nwrEl.value = (num(field('pl','netto_winst_voor_belasting')) + num(field('pl','totaal_resultaat_deelnemingen'))).toFixed(2);
+  }
+
+  function computeIbDerived(){
+    applyFormulas('ib', IB_FORMULAS);
+    const teVerdelenEl = field('ib','te_verdelen_resultaat_voor_correcties');
+    if (teVerdelenEl) teVerdelenEl.value = (num(field('ib','resultaat_vof_maatschap_voor_correcties')) - num(field('ib','totaal_vergoedingen_alle_vennoten_maten'))).toFixed(2);
+
+    const pOwn = num(field('ib','percentage_recht_op_resultaat_ondernemer'));
+    const teVerdelen = num(field('ib','te_verdelen_resultaat_voor_correcties'));
+    const deelOwnEl = field('ib','deel_resultaat_ondernemer');
+    if (deelOwnEl) deelOwnEl.value = (teVerdelen * pOwn / 100).toFixed(2);
+    const pOthersEl = field('ib','percentage_recht_op_resultaat_overige_vennoten_maten');
+    if (pOthersEl && num(pOthersEl) === 0 && pOwn <= 100) pOthersEl.value = (100 - pOwn).toFixed(2);
+    const deelOthersEl = field('ib','deel_resultaat_overige_vennoten_maten');
+    if (deelOthersEl) deelOthersEl.value = (teVerdelen * num(field('ib','percentage_recht_op_resultaat_overige_vennoten_maten')) / 100).toFixed(2);
+    const inkOwnEl = field('ib','totaal_inkomsten_ondernemer_voor_correcties');
+    if (inkOwnEl) inkOwnEl.value = (num(field('ib','totaal_vergoedingen_ondernemer')) + num(field('ib','deel_resultaat_ondernemer'))).toFixed(2);
+    const inkOthersEl = field('ib','totaal_inkomsten_overige_vennoten_maten_voor_correcties');
+    if (inkOthersEl) inkOthersEl.value = (num(field('ib','totaal_vergoedingen_overige_vennoten_maten')) + num(field('ib','deel_resultaat_overige_vennoten_maten'))).toFixed(2);
+  }
+
+  function syncCore(){
+    const bs = bucketMap('bs');
+    const pl = bucketMap('pl');
+    const ib = bucketMap('ib');
+
+    setIfPresent('inventories', bs.voorraden_totaal || 0);
+    setIfPresent('receivables', bs.debiteuren_vorderingen || (bs.totaal_debiteuren || 0) + (bs.totaal_vorderingen || 0));
+    setIfPresent('other_current_assets', bs.overige_vlottende_activa || 0);
+    setIfPresent('cash', bs.liquide_middelen || 0);
+    setIfPresent('creditors', bs.crediteuren || 0);
+    setIfPresent('taxes_payable', bs.belastingen_en_premies || 0);
+    setIfPresent('current_assets', bs.totaal_vlottende_activa || 0);
+    setIfPresent('current_liabilities', bs.totaal_kortlopende_schulden || 0);
+    setIfPresent('other_current_liabilities', Math.max(0, (bs.totaal_kortlopende_schulden || 0) - (bs.crediteuren || 0) - (bs.belastingen_en_premies || 0)));
+    setIfPresent('equity', bs.totaal_eigen_vermogen || 0);
+    setIfPresent('total_assets', bs.totaal_activa || bs.totaal_passiva || 0);
+    setIfPresent('intangible_assets', bs.totaal_immateriele_vaste_activa || 0);
+
+    setIfPresent('turnover_total', pl.totale_omzet || 0);
+    setIfPresent('cogs_total', pl.totaal_inkoopwaarde_omzet || 0);
+    setIfPresent('operating_costs_total', pl.totaal_bedrijfskosten || 0);
+    setIfPresent('depreciation_total', pl.afschrijvingen || pl.totaal_afschrijvingen_immateriele_activa || 0);
+    setIfPresent('financial_income_total', pl.financiele_baten || 0);
+    setIfPresent('financial_expense_total', pl.financiele_lasten || 0);
+    setIfPresent('extraordinary_income_total', pl.buitengewone_baten || 0);
+    setIfPresent('extraordinary_expense_total', pl.buitengewone_lasten || 0);
+    if (num(q('#net_result_no_ib')) === 0) setIfPresent('net_result_no_ib', pl.netto_winst_resultaat || pl.netto_winst_voor_belasting || 0);
+    if (num(q('[name="prognose_income"]')) === 0) q('[name="prognose_income"]').value = ((pl.prognose_volledig_jaar || 0).toFixed(2));
+
+    setIfPresent('saldo_fiscale_winst', ib.saldo_fiscale_winst || 0);
+    setIfPresent('private_use_car', ib.privegebruik_auto || 0);
+    setIfPresent('box1_wage_before_start', ib.looninkomsten_voor_starten_onderneming || 0);
+    setIfPresent('box1_wage_during', ib.looninkomen_naast_tijdens_ondernemerschap || 0);
+    setIfPresent('box1_benefits', ib.inkomensvervangende_uitkeringen || 0);
+    setIfPresent('box1_row', ib.inkomsten_uit_overige_werkzaamheden || 0);
+    setIfPresent('other_box1_income', ib.overige_box1_inkomsten || 0);
+    setIfPresent('dividend', ib.totaal_genoten_dividend || 0);
+
+    q('#bs_json').value = JSON.stringify(bs);
+    q('#pl_json').value = JSON.stringify(pl);
+    q('#ib_json').value = JSON.stringify(ib);
+
+    const base = num(q('#saldo_fiscale_winst')) || num(q('#net_result_no_ib'));
+    const positives = num(q('[name="non_deductible_costs"]')) + num(q('[name="special_tax_expenses"]')) + num(q('[name="random_depreciation"]')) + num(q('[name="investment_deduction"]')) + num(q('[name="other_positive_fiscal"]')) + (num(q('[name="expired_rent_base"]')) * (num(q('[name="expired_rent_factor_pct"]'))/100));
+    const negatives = num(q('#private_use_car')) + num(q('[name="incidental_income"]')) + num(q('[name="other_negative_fiscal"]'));
+    const total = base + positives - negatives + num(q('#other_box1_income'));
+    q('#preview-income').textContent = fmt(total);
+
+    const ca = num(q('#current_assets'));
+    const cl = num(q('#current_liabilities'));
+    const inv = num(q('#inventories'));
+    const cr = cl === 0 ? (ca > 0 ? 1 : 0) : (ca / cl);
+    const qr = cl === 0 ? ((ca - inv) > 0 ? 1 : 0) : ((ca - inv) / cl);
+    const wk = ca - cl;
+    q('#preview-cr').textContent = fmtNum(cr);
+    q('#preview-qr').textContent = fmtNum(qr);
+    q('#preview-wk').textContent = fmt(wk);
+    const ytdMonths = Math.max(1, num(q('[name="ytd_months"]')));
+    const extrap = num(q('[name="extrapolated_income"]')) || (num(q('[name="realized_income_ytd"]')) * (12 / ytdMonths));
+    q('#preview-extrap').textContent = fmt(extrap);
+  }
+
+  function recalcAll(){
+    applyFormulas('bs', BALANCE_FORMULAS);
+    applyFormulas('pl', PL_TOTAL_FORMULAS);
+    computePlDerived();
+    computeIbDerived();
+    syncCore();
+  }
+
+  all('.detail-input, .calc-field, #tab-core input').forEach(el => el.addEventListener('input', recalcAll));
+  q('#yearForm').addEventListener('submit', () => { recalcAll(); });
+  recalcAll();
+})();
+</script>
+{% endblock %}

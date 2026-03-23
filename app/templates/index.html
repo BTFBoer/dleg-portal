@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h1 class="h3 mb-1">Dossiers</h1>
+    <div class="soft">Gebruiksvriendelijke startpagina met directe toegang tot dossier, onderneming, berekening en rapport.</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="/cases/search">Zoeken</a>
+    <a class="btn btn-primary" href="/cases/new">Nieuw dossier</a>
+  </div>
+</div>
+
+{% if not cases %}
+  <div class="card"><div class="card-body"><div class="alert alert-secondary mb-0">Nog geen dossiers. Maak er eentje aan en voeg daarna onderneming(en), jaarcijfers en documenten toe.</div></div></div>
+{% else %}
+  <div class="row g-3">
+    {% for c in cases %}
+      <div class="col-12 col-xl-6">
+        <div class="card kpi-card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between gap-3">
+              <div>
+                <div class="small soft">Dossier {{ c.dossier_nr }}{% if c.report_number %} • {{ c.report_number }}{% endif %}</div>
+                <div class="h5 mb-1">{{ c.applicant_name or 'Onbekende aanvrager' }}</div>
+                <div class="soft">{{ c.lender_name }} • {{ c.case_type }} • {{ 'NHG' if c.with_nhg else 'Zonder NHG' }}</div>
+              </div>
+              <div class="text-end">
+                <div class="kpi-label">Laatst berekend</div>
+                <div class="kpi-value mono">€ {{ '%.2f'|format(c.last_income or 0.0) }}</div>
+              </div>
+            </div>
+            <div class="mt-3 d-flex flex-wrap gap-2">
+              <span class="badge text-bg-light">{{ c.entrepreneur_type }}</span>
+              {% if c.assessment_result %}<span class="badge badge-soft">{{ c.assessment_result }}</span>{% endif %}
+              {% if c.last_policy_key %}<span class="badge text-bg-secondary">{{ c.last_policy_key }}</span>{% endif %}
+            </div>
+            <div class="mt-3 d-flex gap-2">
+              <a class="btn btn-outline-primary btn-sm" href="/cases/{{ c.id }}">Open dossier</a>
+              <a class="btn btn-outline-secondary btn-sm" href="/cases/{{ c.id }}/edit">Bewerken</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

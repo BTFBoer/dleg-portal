@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="h3">Document toevoegen aan documentenlijst</h1>
+<p class="text-muted">Dossier {{ case.dossier_nr }} – {{ case.applicant_name }}</p>
+
+<form method="post" action="/cases/{{ case.id }}/documents/new" class="row g-3">
+  <div class="col-md-4">
+    <label class="form-label">Categorie</label>
+    <input class="form-control" name="category" value="Privé/Algemeen">
+    <div class="form-text">Bijv. Privé/Algemeen of ondernemingsnaam.</div>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Onderneming (optioneel)</label>
+    <select class="form-select" name="enterprise_id">
+      <option value="">—</option>
+      {% for e in enterprises %}
+        <option value="{{ e.id }}">{{ e.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Documenttype</label>
+    <input class="form-control" name="doc_type" placeholder="Aangifte inkomstenbelasting 2023 (definitief)">
+  </div>
+
+  <div class="col-md-8">
+    <label class="form-label">Bestandsnaam / omschrijving</label>
+    <input class="form-control" name="filename" placeholder="Sanders_YMAC-IB2023.pdf">
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Notitie</label>
+    <input class="form-control" name="notes" placeholder="bijv. gecontroleerd met aanslag">
+  </div>
+
+  <div class="col-12">
+    <button class="btn btn-primary">Opslaan</button>
+    <a class="btn btn-link" href="/cases/{{ case.id }}">Terug</a>
+  </div>
+</form>
+
+<hr>
+
+<h2 class="h5">Huidige documentenlijst</h2>
+{% if not documents_used %}
+  <div class="alert alert-secondary">Nog geen items.</div>
+{% else %}
+  <div class="table-responsive">
+    <table class="table table-sm">
+      <thead><tr><th>Categorie</th><th>Type</th><th>Bestand</th><th>Notitie</th></tr></thead>
+      <tbody>
+        {% for d in documents_used %}
+          <tr>
+            <td>{{ d.category }}</td>
+            <td>{{ d.doc_type }}</td>
+            <td>{{ d.filename }}</td>
+            <td>{{ d.notes }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+
+{% endblock %}

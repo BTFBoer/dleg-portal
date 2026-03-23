@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start">
+  <div>
+    <h1 class="h4">Organogram – dossier {{ case.dossier_nr }}</h1>
+    <div class="text-muted small">Entiteiten: {{ node_count }} • Relaties: {{ edge_count }} (limiet 100 entiteiten)</div>
+  </div>
+  <div class="text-end">
+    <a class="btn btn-outline-secondary" href="/cases/{{ case.id }}">Terug</a>
+  </div>
+</div>
+
+<hr>
+
+<div class="alert alert-secondary small">
+  Tip: zet “geen dividend” op een relatie als er wel economisch belang is maar geen dividendbevoegdheid (bijv. certificering/statutaire beperking).
+</div>
+
+<div class="mermaid">
+{{ mermaid }}
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true });
+</script>
+{% endblock %}

@@ -1,0 +1,84 @@
+{
+  "NHG_IKV_01_2026": {
+    "label": "NHG IKV 01.2026 (generiek)",
+    "years_required": 3,
+    "method": "nhg",
+    "ib_income_basis": "fiscal_profit",
+    "cap_last_year": true,
+    "liquidity_min": 1.0,
+    "solvability_min": 0.25,
+    "interim_required_from_month": 8,
+    "interim_can_only_reduce": true,
+    "allow_replace_oldest_year_with_current": true,
+    "replace_allowed_from_month": 4
+    ,
+    "entity_limits": {
+      "max_entities": 3,
+      "max_minority_participations": 2,
+      "enforce": false
+    },
+    "organogram_max_entities": 100
+  },
+  "VOLKSBANK_RISKPOLICY_1_5": {
+    "label": "Volksbank Risk Policy geaccrediteerde partijen v1.5 (2024-07-01)",
+    "years_required": 3,
+    "method": "volksbank",
+    "ib_income_basis": "fiscal_profit",
+    "cap_last_year": true,
+    "liquidity_min": 1.0,
+    "solvability_min": 0.20,
+    "interim_required_from_month": 8,
+    "interim_can_only_reduce": true,
+    "dga": {
+      "allow_dividend_if_share_pct_greater_than": 50,
+      "cap_dividend_to_last_year_profit_after_tax": true,
+      "double_balance_test": {
+        "liquidity_min": 1.0,
+        "solvability_min": 0.20
+      }
+    }
+    ,
+    "entity_limits": {
+      "max_entities": 3,
+      "max_minority_participations": 2,
+      "enforce": false
+    },
+    "organogram_max_entities": 100
+  },
+  "BLG_WONEN_GENERIC": {
+    "label": "BLG Wonen (generiek – configureer per gids/jaar)",
+    "years_required": 3,
+    "method": "111",
+    "ib_income_basis": "box1_from_business",
+    "cap_last_year": true,
+    "liquidity_min": 1.0,
+    "solvability_min": 0.25,
+    "interim_required_from_month": 8,
+    "interim_can_only_reduce": true
+    ,
+    "entity_limits": {
+      "max_entities": 3,
+      "max_minority_participations": 2,
+      "enforce": false
+    },
+    "organogram_max_entities": 100
+  },
+  "KNAB_CONCEPT_2024_015": {
+    "label": "Knab (concept 2024.015 – startset)",
+    "years_required": 3,
+    "method": "knab",
+    "ib_income_basis": "fiscal_profit",
+    "cap_last_year": true,
+    "liquidity_min": 1.0,
+    "solvability_min": 0.25,
+    "interim_required_from_month": 8,
+    "interim_can_only_reduce": true
+    ,
+    "entity_limits": {
+      "max_entities": 3,
+      "max_minority_participations": 2,
+      "enforce": false
+    },
+    "organogram_max_entities": 100
+  }
+}

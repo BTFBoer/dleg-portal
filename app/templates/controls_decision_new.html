@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="h3">Beslissing toevoegen</h1>
+<p class="text-muted">Dossier {{ case.dossier_nr }} – {{ case.applicant_name }}</p>
+
+<form method="post" action="/cases/{{ case.id }}/controls/decisions/new" class="row g-3">
+  <div class="col-md-3">
+    <label class="form-label">Stap</label>
+    <input class="form-control" name="step_nr" type="number" value="1">
+  </div>
+  <div class="col-md-5">
+    <label class="form-label">Status</label>
+    <input class="form-control" name="status" placeholder="Akkoord / Definitief akkoord">
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Behandelaar</label>
+    <input class="form-control" name="handler_name" value="{{ case.handler_name }}">
+  </div>
+  <div class="col-12">
+    <label class="form-label">Opmerkingen</label>
+    <textarea class="form-control" name="notes" rows="3" placeholder="bijv. voorbespreeknummer..."></textarea>
+  </div>
+  <div class="col-12">
+    <button class="btn btn-primary">Opslaan</button>
+    <a class="btn btn-link" href="/cases/{{ case.id }}">Terug</a>
+  </div>
+</form>
+
+{% endblock %}

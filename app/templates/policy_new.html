@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3">Nieuwe policy (JSON)</h1>
+
+<form method="post" class="row g-3">
+  <div class="col-md-4">
+    <label class="form-label">Key (uniek)</label>
+    <input class="form-control" name="key" placeholder="BLG_2026_JAN" required>
+  </div>
+  <div class="col-md-8">
+    <label class="form-label">Label</label>
+    <input class="form-control" name="label" placeholder="BLG acceptatiegids 2026" required>
+  </div>
+
+  <div class="col-md-4">
+    <label class="form-label">Geldverstrekker</label>
+    <input class="form-control" name="lender_name" placeholder="BLG" required>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Versie</label>
+    <input class="form-control" name="version" placeholder="2026.01">
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Bron-URL</label>
+    <input class="form-control" name="source_url" placeholder="https://...pdf">
+  </div>
+
+  <div class="col-12">
+    <label class="form-label">Policy JSON</label>
+    <textarea class="form-control" name="json_text" rows="14" required>{
+  "years_required": 3,
+  "method": "111",
+  "ib_income_basis": "box1_from_business",
+  "cap_last_year": true,
+  "liquidity_min": 1.0,
+  "solvability_min": 0.25,
+  "interim_required_from_month": 8,
+  "interim_can_only_reduce": true
+}</textarea>
+    <div class="form-text">Gebruik dezelfde velden als in <code>app/policies/defaults.json</code>. Je kunt dit later uitbreiden per maatschappij.</div>
+  </div>
+
+  <div class="col-12">
+    <button class="btn btn-primary">Opslaan</button>
+    <a class="btn btn-link" href="/policies">Annuleren</a>
+  </div>
+</form>
+{% endblock %}

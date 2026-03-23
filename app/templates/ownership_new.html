@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start">
+  <div>
+    <h1 class="h3">Structuur / Belangen</h1>
+    <div class="text-muted">Dossier {{ case.dossier_nr }} • {{ case.applicant_name }}</div>
+  </div>
+  <div class="text-end">
+    <a class="btn btn-outline-secondary" href="/cases/{{ case.id }}">Terug</a>
+  </div>
+</div>
+
+<hr>
+
+<div class="alert alert-info">
+  Leg hier de eigendomsstructuur vast (direct en indirect). Voorbeeld: 100% (dividendbevoegd) in persoonlijke holding → 60% (dividendbevoegd) in tussenholding → 25% (niet dividendbevoegd) in werkmaatschappij.
+  <br>De berekening gebruikt dit (indicatief) om stemrecht/dividend-drempels te bepalen.
+</div>
+
+<form method="post" action="/cases/{{ case.id }}/ownership/new" class="row g-3">
+  <div class="col-md-4">
+    <label class="form-label">Owner type</label>
+    <select class="form-select" name="owner_kind">
+      <option value="PERSON">Aanvrager (persoon)</option>
+      <option value="ENTERPRISE">Onderneming</option>
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Owner onderneming (alleen bij Owner type = Onderneming)</label>
+    <select class="form-select" name="owner_enterprise_id">
+      <option value="0">—</option>
+      {% for e in enterprises %}
+        <option value="{{ e.id }}">{{ e.name }} ({{ e.legal_form }})</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Owner label (voor persoon / extra toelichting)</label>
+    <input class="form-control" name="owner_label" value="{{ case.applicant_name }}">
+  </div>
+
+  <div class="col-md-6">
+    <label class="form-label">Owned onderneming</label>
+    <select class="form-select" name="owned_enterprise_id" required>
+      {% for e in enterprises %}
+        <option value="{{ e.id }}">{{ e.name }} ({{ e.legal_form }})</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Belang (%)</label>
+    <input class="form-control" name="share_pct" type="number" step="0.01" value="0">
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Stemrecht (%)</label>
+    <input class="form-control" name="voting_pct" type="number" step="0.01" value="0">
+    <div class="form-text">0 = gelijk aan belang</div>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Dividendbevoegd</label>
+    <select class="form-select" name="dividend_entitled">
+      <option value="true" selected>Ja</option>
+      <option value="false">Nee</option>
+    </select>
+  </div>
+
+  <div class="col-12">
+    <label class="form-label">Notitie</label>
+    <input class="form-control" name="notes" placeholder="bijv. certificering / statutaire beperking / geen winstrecht">
+  </div>
+
+  <div class="col-12">
+    <button class="btn btn-primary">Toevoegen</button>
+    <a class="btn btn-link" href="/cases/{{ case.id }}">Annuleren</a>
+  </div>
+</form>
+
+{% endblock %}
