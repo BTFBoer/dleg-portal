@@ -438,6 +438,20 @@ def calculate_case(
         final, income_years, notes = calculate_dga_income(years, policy, share_pct, current_month, dividend_share_pct)
         ratios = {y.year: calc_ratios(y) for y in years if y.year}
         flags = {y.year: {"Current Ratio": flag_ge(ratios[y.year].get("current_ratio"), float(policy.get("liquidity_min", 1.0)))} for y in years if y.year}
+        if policy.get("profitability_rule") == "latest_and_one_prior":
+            profit_values = [
+                float(y.profit_after_corp_tax or y.net_result_no_ib or 0.0)
+                for y in sorted(years, key=lambda item: item.year)[-3:]
+            ]
+            if not profit_values or profit_values[-1] <= 0 or not any(value > 0 for value in profit_values[:-1]):
+                notes.append("NIET AKKOORD: laatste en minimaal één eerder toetsjaar moeten winstgevend zijn.")
+
+        if policy.get("requires_manual_review"):
+            notes.append(
+                "BELEIDSVERIFICATIE VERPLICHT: "
+                + str(policy.get("manual_review_reason") or "Handmatige beleidscontrole vereist.")
+            )
+
         return CalcResult(
             income_years=income_years,
             base_income_avg=final,
@@ -451,4 +465,17 @@ def calculate_case(
 
     # IB
     calc, _ = calculate_ib_income_viiz(years, policy, current_month)
+    if policy.get("profitability_rule") == "latest_and_one_prior":
+        ordered = [calc.income_years[year] for year in sorted(calc.income_years)[-3:]]
+        if not ordered or ordered[-1] <= 0 or not any(value > 0 for value in ordered[:-1]):
+            calc.notes.append("NIET AKKOORD: laatste en minimaal één eerder toetsjaar moeten winstgevend zijn.")
+    if policy.get("requires_manual_review"):
+        calc.notes.append(
+            "BELEIDSVERIFICATIE VERPLICHT: "
+            + str(policy.get("manual_review_reason") or "Handmatige beleidscontrole vereist.")
+        )
+    if policy.get("quick_ratio_min") is not None:
+        calc.notes.append(
+            f"Handmatig controleren: quick ratio minimaal {float(policy['quick_ratio_min']):.2f}; voorraad moet afzonderlijk zijn vastgelegd."
+        )
     return calc
