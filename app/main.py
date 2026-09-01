@@ -1,12 +1,5 @@
 from __future__ import annotations
 import json
-from app.services.ikv_engine import (
-    calculate_net_income, 
-    calculate_solvency, 
-    calculate_liquidity, 
-    assess_case
-)
-import json
 import os
 from datetime import date, datetime
 from pathlib import Path
@@ -295,7 +288,7 @@ def seed_defaults() -> None:
             existing = s.exec(select(Policy).where(Policy.key == key)).first()
             if existing:
                 continue
-            lender = "NHG" if key.startswith("NHG") else ("Volksbank" if "VOLKSBANK" in key else ("BLG" if "BLG" in key else "Knab"))
+            lender = cfg.get("lender_name") or ("NHG" if key.startswith("NHG") else ("Volksbank" if "VOLKSBANK" in key else ("BLG" if "BLG" in key else "Knab")))
             p = Policy(
                 key=key,
                 label=cfg.get("label", key),
@@ -434,7 +427,7 @@ def multi_lender(case_id: int, request: Request, enterprise_id: int = 0, scope: 
         max_entities = int(limits.get("max_entities", 3))
         max_minority = int(limits.get("max_minority_participations", 2))
         enforce = bool(limits.get("enforce", False))
-        status = "Akkoord"
+        status = "Voorleggen" if bool(pol.get("requires_manual_review", False)) else "Akkoord"
 
         if groups and len(groups) > max_entities:
             status = "Voorleggen"
@@ -1660,6 +1653,11 @@ def calculate(
             calc.final_income = 0.0
             notes_extra.append("Beleid: inkomen op nihil gezet i.v.m. te veel minderheidsdeelnemingen.")
 
+    if bool(policy.get("requires_manual_review", False)):
+        notes_extra.append(
+            "BELEIDSVERIFICATIE VERPLICHT: "
+            + str(policy.get("manual_review_reason") or "Dit profiel kan niet automatisch worden gefiatteerd.")
+        )
     calc.notes.extend(notes_extra)
 
     year_breakdowns = []
@@ -1700,40 +1698,6 @@ def calculate(
     c.last_calc_at = datetime.utcnow()
     s.add(c)
     s.commit()
-# ... je bestaande code waar je de 'case' en 'enterprise' ophaalt ...
-
-    # --- NIEUWE IKV ENGINE LOGICA ---
-    # Stel we pakken hier even het meest recente jaar (bijv. controlejaar) voor de ratio's:
-    latest_year = enterprise.years[-1] if enterprise.years else None
-    
-    netto_winst = 0.0
-    solvabiliteit = 0.0
-    liquiditeit = 0.0
-    oordeel = "Geen data"
-
-    if latest_year:
-        # Haal de JSON data op (als die leeg is, maak er een lege dict van)
-        vw_data = json.loads(latest_year.pl_json) if latest_year.pl_json else {}
-        balance_data = json.loads(latest_year.bs_json) if latest_year.bs_json else {}
-
-        # Haal het door jouw nieuwe engine!
-        netto_winst = calculate_net_income(vw_data)
-        solvabiliteit = calculate_solvency(balance_data)
-        liquiditeit = calculate_liquidity(balance_data)
-
-        # Let op: in een echte IKV pak je voor 'assess_case' het gemiddelde over 3 jaar. 
-        # Voor nu gebruiken we even de netto_winst van het laatste jaar om het te testen:
-        oordeel = assess_case(netto_winst, solvabiliteit, liquiditeit)
-    # --------------------------------
-    return templates.TemplateResponse("calculate.html", {
-        "request": request,
-        "case": case,
-        # Voeg deze regels toe:
-        "netto_winst": netto_winst,
-        "solvabiliteit": solvabiliteit,
-        "liquiditeit": liquiditeit,
-        "oordeel": oordeel
-    })
     return templates.TemplateResponse(
         "calculate.html",
         {
