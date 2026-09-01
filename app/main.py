@@ -257,6 +257,26 @@ def yd_to_yearinput(yd: YearData) -> YearInput:
         intangible_assets=float(getattr(yd, 'intangible_assets', 0.0) or 0.0),
     )
 
+
+def business_age_months(start_value: Any, on_date: Optional[date] = None) -> Optional[int]:
+    """Calculate completed months since the registered start date."""
+    if not start_value:
+        return None
+    if isinstance(start_value, datetime):
+        start = start_value.date()
+    elif isinstance(start_value, date):
+        start = start_value
+    else:
+        try:
+            start = date.fromisoformat(str(start_value)[:10])
+        except (TypeError, ValueError):
+            return None
+    end = on_date or date.today()
+    months = (end.year - start.year) * 12 + end.month - start.month
+    if end.day < start.day:
+        months -= 1
+    return max(0, months)
+
 APP_DIR = Path(__file__).resolve().parent
 DATA_DIR = APP_DIR / "data"
 UPLOAD_DIR = DATA_DIR / "uploads"
@@ -421,6 +441,7 @@ def multi_lender(case_id: int, request: Request, enterprise_id: int = 0, scope: 
             current_month=current_month,
             share_pct=effective_voting_pct,
             dividend_share_pct=effective_dividend_pct,
+            entrepreneur_months=business_age_months(e.start_date),
         )
         # Entity limits (optional)
         limits = pol.get("entity_limits", {}) if isinstance(pol, dict) else {}
@@ -446,7 +467,7 @@ def multi_lender(case_id: int, request: Request, enterprise_id: int = 0, scope: 
 
         # Simple decision rule: ratio’s
         for yf in calc.ratio_flags.values():
-            if yf.get("current_ratio") == "niet akkoord" or yf.get("solvability") == "niet akkoord":
+            if any(str(flag).strip().lower() == "niet akkoord" for flag in yf.values()):
                 status = "Voorleggen"
                 break
         results.append({"policy": p, "status": status, "income": calc.final_income, "notes": calc.notes})
@@ -1631,6 +1652,7 @@ def calculate(
         current_month=current_month,
         share_pct=effective_voting_pct,
         dividend_share_pct=effective_dividend_pct,
+        entrepreneur_months=business_age_months(e.start_date),
     )
 
     # entity limit rules (policy-configurable)
@@ -1779,6 +1801,7 @@ def report_pdf(case_id: int, policy_key: str = "", enterprise_id: int = 0, scope
         current_month=current_month,
         share_pct=effective_voting_pct,
         dividend_share_pct=effective_dividend_pct,
+        entrepreneur_months=business_age_months(e.start_date),
     )
 
     # 'maximaal te onttrekken' op basis van laatste jaar in years

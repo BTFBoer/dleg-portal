@@ -61,14 +61,58 @@ class LenderPolicyTests(unittest.TestCase):
         self.assertTrue(any("minimaal één eerder toetsjaar" in note for note in result.notes))
         self.assertTrue(any("BELEIDSVERIFICATIE VERPLICHT" in note for note in result.notes))
 
-    def test_abn_exposes_unautomated_quick_ratio_control(self):
+    def test_abn_uses_configured_quick_ratio_threshold(self):
         result = calculate_case(
             entrepreneur_type="IB",
-            years=[year(2023, 40_000), year(2024, 45_000), year(2025, 50_000)],
+            years=[
+                YearInput(
+                    year=book_year,
+                    saldo_fiscale_winst=income,
+                    current_assets=100_000,
+                    inventories=20_000,
+                    current_liabilities=100_000,
+                    equity=30_000,
+                    total_assets=100_000,
+                )
+                for book_year, income in ((2023, 40_000), (2024, 45_000), (2025, 50_000))
+            ],
             policy=POLICIES["ABN_AMRO_MATRIX_2024"],
             current_month=9,
         )
-        self.assertTrue(any("quick ratio minimaal 0.80" in note for note in result.notes))
+        self.assertEqual(result.ratio_flags[2025]["Quick Ratio"], "Akkoord")
+        self.assertTrue(any("Quick ratio getoetst op minimaal 0.80" in note for note in result.notes))
+
+    def test_abn_starter_factor_12_to_23_months(self):
+        result = calculate_case(
+            entrepreneur_type="IB",
+            years=[year(2024, 40_000), year(2025, 40_000)],
+            policy=POLICIES["ABN_AMRO_MATRIX_2024"],
+            current_month=3,
+            entrepreneur_months=18,
+        )
+        self.assertEqual(result.final_income, 30_000)
+        self.assertTrue(any("75%" in note for note in result.notes))
+
+    def test_abn_starter_factor_24_to_35_months(self):
+        result = calculate_case(
+            entrepreneur_type="IB",
+            years=[year(2023, 40_000), year(2024, 40_000), year(2025, 40_000)],
+            policy=POLICIES["ABN_AMRO_MATRIX_2024"],
+            current_month=3,
+            entrepreneur_months=30,
+        )
+        self.assertEqual(result.final_income, 36_000)
+        self.assertTrue(any("90%" in note for note in result.notes))
+
+    def test_abn_under_12_months_requires_review(self):
+        result = calculate_case(
+            entrepreneur_type="IB",
+            years=[year(2025, 40_000)],
+            policy=POLICIES["ABN_AMRO_MATRIX_2024"],
+            current_month=3,
+            entrepreneur_months=8,
+        )
+        self.assertTrue(any("minder dan 12 maanden" in note for note in result.notes))
 
 
 if __name__ == "__main__":
