@@ -220,6 +220,17 @@ def flag_ge(value: Optional[float], minimum: float) -> str:
     return "Akkoord" if float(value) >= float(minimum) else "Niet akkoord"
 
 
+def starter_factor_pct(policy: Dict, entrepreneur_months: Optional[int]) -> Optional[float]:
+    """Return the configured starter haircut for an explicitly known business age."""
+    if entrepreneur_months is None or entrepreneur_months >= 36:
+        return None
+    if entrepreneur_months >= 24 and policy.get("starter_factor_pct_24_35") is not None:
+        return float(policy["starter_factor_pct_24_35"])
+    if entrepreneur_months >= 12 and policy.get("starter_factor_pct_12_23") is not None:
+        return float(policy["starter_factor_pct_12_23"])
+    return None
+
+
 # --- Calculations ---
 
 
@@ -337,6 +348,7 @@ def calculate_ib_income_viiz(
     ratios: Dict[int, Dict[str, Optional[float]]] = {y.year: calc_ratios(y) for y in ys}
 
     liq_min = float(policy.get("liquidity_min", 1.0))
+    quick_min = float(policy.get("quick_ratio_min", liq_min))
     sol_min = float(policy.get("solvability_min_pct", 20.0))
     wk_min = float(policy.get("working_capital_min", 0.0))
 
@@ -346,7 +358,7 @@ def calculate_ib_income_viiz(
         flags[y.year] = {
             "Winstgevendheid": "Akkoord" if income_full[y.year] >= 0 else "Niet akkoord",
             "Current Ratio": flag_ge(r.get("current_ratio"), liq_min),
-            "Quick Ratio": flag_ge(r.get("quick_ratio"), liq_min),
+            "Quick Ratio": flag_ge(r.get("quick_ratio"), quick_min),
             "Werkkapitaal": "Akkoord" if r.get("working_capital") is not None and r.get("working_capital") >= wk_min else "Niet akkoord",
             "Solvabiliteit": flag_ge(r.get("solvability_pct"), sol_min),
         }
@@ -432,12 +444,66 @@ def calculate_case(
     current_month: int,
     share_pct: float = 100.0,
     dividend_share_pct: Optional[float] = None,
+    entrepreneur_months: Optional[int] = None,
 ) -> CalcResult:
     entrepreneur_type = (entrepreneur_type or "IB").upper()
+    starter_factor = starter_factor_pct(policy, entrepreneur_months)
+    starter_note = ""
+    if starter_factor is not None:
+        starter_note = (
+            f"Startercorrectie toegepast: {starter_factor:.0f}% bij "
+            f"{int(entrepreneur_months or 0)} maanden ondernemerschap."
+        )
+    elif entrepreneur_months is not None and entrepreneur_months < 12 and (
+        policy.get("starter_factor_pct_12_23") is not None
+        or policy.get("starter_factor_pct_24_35") is not None
+    ):
+        starter_note = (
+            "VOORLEGGEN: minder dan 12 maanden ondernemer; alleen de expliciete "
+            "uitzonderingen uit het geldende beleid mogen worden toegepast."
+        )
+
     if entrepreneur_type in ("DGA", "BV", "NIET_IB", "NIET-IB"):
         final, income_years, notes = calculate_dga_income(years, policy, share_pct, current_month, dividend_share_pct)
+        if starter_factor is not None:
+            final = round(final * starter_factor / 100.0, 2)
+        if starter_note:
+            notes.append(starter_note)
         ratios = {y.year: calc_ratios(y) for y in years if y.year}
-        flags = {y.year: {"Current Ratio": flag_ge(ratios[y.year].get("current_ratio"), float(policy.get("liquidity_min", 1.0)))} for y in years if y.year}
+        liq_min = float(policy.get("liquidity_min", 1.0))
+        quick_min = float(policy.get("quick_ratio_min", liq_min))
+        sol_min = float(policy.get("solvability_min_pct", 20.0))
+        wk_min = float(policy.get("working_capital_min", 0.0))
+        flags = {
+            y.year: {
+                "Winstgevendheid": "Akkoord"
+                if float(y.profit_after_corp_tax or y.net_result_no_ib or 0.0) >= 0
+                else "Niet akkoord",
+                "Current Ratio": flag_ge(ratios[y.year].get("current_ratio"), liq_min),
+                "Quick Ratio": flag_ge(ratios[y.year].get("quick_ratio"), quick_min),
+                "Werkkapitaal": "Akkoord"
+                if ratios[y.year].get("working_capital") is not None
+                and float(ratios[y.year]["working_capital"]) >= wk_min
+                else "Niet akkoord",
+                "Solvabiliteit": flag_ge(ratios[y.year].get("solvability_pct"), sol_min),
+            }
+            for y in years
+            if y.year
+        }
+        if policy.get("profitability_rule") == "latest_and_one_prior":
+            profit_values = [
+                float(y.profit_after_corp_tax or y.net_result_no_ib or 0.0)
+                for y in sorted(years, key=lambda item: item.year)[-3:]
+            ]
+            if not profit_values or profit_values[-1] <= 0 or not any(value > 0 for value in profit_values[:-1]):
+                notes.append("NIET AKKOORD: laatste en minimaal één eerder toetsjaar moeten winstgevend zijn.")
+
+        if policy.get("requires_manual_review"):
+            notes.append(
+                "BELEIDSVERIFICATIE VERPLICHT: "
+                + str(policy.get("manual_review_reason") or "Handmatige beleidscontrole vereist.")
+            )
+
         return CalcResult(
             income_years=income_years,
             base_income_avg=final,
@@ -450,5 +516,25 @@ def calculate_case(
         )
 
     # IB
-    calc, _ = calculate_ib_income_viiz(years, policy, current_month)
+    effective_policy = dict(policy)
+    if starter_factor is not None:
+        effective_policy["income_factor_pct"] = min(
+            float(effective_policy.get("income_factor_pct", 100.0)), starter_factor
+        )
+    calc, _ = calculate_ib_income_viiz(years, effective_policy, current_month)
+    if starter_note:
+        calc.notes.append(starter_note)
+    if policy.get("profitability_rule") == "latest_and_one_prior":
+        ordered = [calc.income_years[year] for year in sorted(calc.income_years)[-3:]]
+        if not ordered or ordered[-1] <= 0 or not any(value > 0 for value in ordered[:-1]):
+            calc.notes.append("NIET AKKOORD: laatste en minimaal één eerder toetsjaar moeten winstgevend zijn.")
+    if policy.get("requires_manual_review"):
+        calc.notes.append(
+            "BELEIDSVERIFICATIE VERPLICHT: "
+            + str(policy.get("manual_review_reason") or "Handmatige beleidscontrole vereist.")
+        )
+    if policy.get("quick_ratio_min") is not None:
+        calc.notes.append(
+            f"Quick ratio getoetst op minimaal {float(policy['quick_ratio_min']):.2f}; controleer dat voorraad afzonderlijk is vastgelegd."
+        )
     return calc

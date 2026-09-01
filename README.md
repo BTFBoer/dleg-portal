@@ -62,6 +62,15 @@ Daarna kun je in de UI per geldverstrekker een policy (JSON) aanmaken en de gedo
 - **BalanceData**: vlottende activa, kort vreemd vermogen, eigen vermogen, balanstotaal, immateriële VA, rekening‑courant DGA.
 - **Policy (JSON)**: regels voor berekening + ratio‑grenzen + cap‑logica + interim‑regels.
 
+
+## Geldverstrekkerprofielen uit bronarchief
+
+De policy-engine bevat nu ook versiegebonden profielen voor **ABN AMRO, Florius, MoneYou en NIBC**. Deze zijn afgeleid uit de aangeleverde vergelijkingsmatrix van 5 augustus 2024 en, voor NIBC, het rekenvoorbeeld uit 2023.
+
+Omdat de matrix bij ABN AMRO, Florius en MoneYou nog op bevestiging van ABN wachtte en geen actuele afzonderlijke kredietgidsen bevat, zijn alle vier profielen technisch gemarkeerd als **historisch** en **altijd voorleggen**. De berekening is reproduceerbaar, maar de applicatie presenteert de uitkomst niet als automatisch fiatteerbaar.
+
+Zie [de beleidsherkomst en implementatiegrenzen](docs/policy-provenance-abn-florius-moneyou-nibc.md).
+
 ## Risicosectoren (SBI) – optioneel
 
 MVP kan optioneel een **SBI risicosector‑check** doen (voorbeeld: Knab spreadsheet). 
