@@ -2,7 +2,7 @@
 
 ## Source boundary
 
-The supplied archive contained 100 files. After excluding eight system-metadata files and grouping 19 sets of exact duplicates, 72 unique content objects remained. PDF, DOCX, XLSX, EML, HTML, TXT and URL content was reviewed. Customer dossiers and research notes informed workflow requirements only; no personal data or source documents are stored in this repository.
+The supplied archive contained 100 files. After excluding eight system-metadata files and grouping 19 sets of exact duplicates, 72 unique content objects remained. PDF, DOCX, XLSX, EML, HTML, TXT and URL content was reviewed. In addition, 103 unique images embedded in the unique Word files were OCR-checked; they contained no additional references to the four lenders. Customer dossiers and research notes informed workflow requirements only; no personal data or source documents are stored in this repository.
 
 A file ending in `.pdf.crdownload` was technically a readable two-page PDF. It contains 2022 service terms, not lender policy. Its separation between an indicative software result and the lender's final decision is preserved as a design safeguard.
 
